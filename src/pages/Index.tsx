@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompetitionTable } from "@/components/CompetitionTable";
+import { ImportExport } from "@/components/ImportExport";
 import { Plus, Printer, Trash2, Calendar } from "lucide-react";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -155,7 +156,10 @@ const Index = () => {
       </header>
 
       {/* Controls */}
-      <div className="container mx-auto px-4 py-6 print:hidden">
+      <div className="container mx-auto px-4 py-6 print:hidden space-y-4">
+        {/* Import/Export Section */}
+        <ImportExport onDataImported={loadData} />
+
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-md border-2 border-primary">
