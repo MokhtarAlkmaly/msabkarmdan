@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المسابقة الرمضانية (متعدد السنوات - ديناميكي)</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32; 
+            --secondary-color: #f1f8e9;
+            --border-color: #ccc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+
+        header {
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid var(--primary-color); 
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; 
+            text-align: right;
+            width: 250px;
+            font-size: 13px;
+            color: #444;
+        }
+
+        .logo-section img {
+            width: 80px; 
+            height: auto;
+            margin-bottom: 5px;
+        }
+
+        .date-section {
+            text-align: left;
+            width: 200px;
+            font-size: 14px;
+            color: var(--primary-color);
+            font-weight: bold;
+            padding-top: 10px; 
+        }
+
+        .main-title-block {
+            text-align: center;
+            flex-grow: 1;
+            padding: 0 10px;
+        }
+
+        h1 { color: var(--primary-color); margin: 0; font-size: 24px; }
+        h3 { color: #555; margin: 5px 0; }
+        
+        #teacherTitle {
+            display: none;
+            color: #000;
+            text-decoration: underline;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .import-btn { background-color: #00897b !important; }
+
+        .year-section {
+            background-color: #e8f5e9;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #c8e6c9;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .filter-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-right: 2px solid #ddd;
+            padding-right: 15px;
+            margin-right: 5px;
+        }
+
+        select { 
+            padding: 8px; 
+            border-radius: 4px; 
+            border: 1px solid #ccc; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+        
+        #yearSelect {
+            font-weight: bold;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover { background-color: #1b5e20; }
+        button.print-btn { background-color: #0277bd; }
+        button.print-btn:hover { background-color: #01579b; }
+        button.reset-btn { background-color: #c62828; }
+        button.reset-btn:hover { background-color: #b71c1c; }
+
+        .save-status {
+            margin-right: auto;
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .table-container { overflow-x: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 5px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .h-col-1442, .h-col-1443, .h-col-1444, .h-col-1445, .h-col-1446, .h-col-cumulative {
+            width: 45px;
+            min-width: 45px;
+        }
+        
+        .group-history input { 
+            width: 100% !important; 
+            padding: 2px 0; 
+        }
+
+        thead { background-color: var(--primary-color); color: white; }
+        
+        .group-history { background-color: #fff3e0; color: black; }
+        .group-scores { background-color: #e8f5e9; color: black; }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            text-align: center;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        
+        input.score { background-color: #f1f8e9; font-weight: bold; }
+        input.score:focus { background-color: #fff; border-color: var(--primary-color); }
+        input[type="number"] { width: 50px; }
+        
+        .inp-parts, .inp-hifz-year { width: 50px !important; background-color: #fffde7; font-weight: bold; }
+
+        .inp-h46 { background-color: #c8e6c9 !important; font-weight: bold; color: #1b5e20; }
+        .inp-totalHifz { background-color: #e0f7fa !important; font-weight: bold; color: #006064; }
+
+        .readonly-field {
+            background-color: #eee;
+            font-weight: bold;
+            color: #333;
+            border: none;
+            pointer-events: none;
+        }
+        
+        .status-absent { background-color: #ffe0b2; color: #e65100; font-weight: bold; }
+        .status-active { background-color: #c8e6c9; color: var(--primary-color); font-weight: bold; }
+
+        .hidden-col { display: none !important; }
+        tr.hidden-row { display: none; }
+        
+        /* FOOTER STYLE */
+        footer {
+            position: fixed; 
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: #777;
+            padding: 5px 0;
+        }
+
+
+        @media print {
+            .controls, .delete-btn { display: none !important; }
+            input { border: none; background: transparent; }
+            table, th, td { border: 1px solid #000; }
+            body { font-size: 12px; margin: 0; }
+            
+            /* Print Header Layout */
+            .header-content {
+                border-bottom: 2px solid #000;
+                margin-bottom: 10px;
+                padding-bottom: 5px;
+            }
+            .logo-section, .date-section { font-size: 10px; }
+            .logo-section img { display: block !important; }
+            
+            #teacherTitle.active-print-title { display: block; text-align: center; font-size: 18px; }
+            @page { size: landscape; margin: 10mm; }
+            input.score, .inp-parts, .inp-hifz-year, .inp-h46, .inp-totalHifz, .year-section, .status-active, .status-absent { background-color: transparent !important; }
+            .h-col-1442, .h-col-1443, .h-col-1444, .h-col-1445, .h-col-1446, .h-col-cumulative { width: 45px; min-width: 45px; } 
+            
+            /* Print Footer */
+            footer {
+                position: static;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <div class="logo-section">
+            <img src="markz.png" alt="شعار المركز" onerror="this.style.display='none'">
+            <strong>مركز إنماء الاهلي الخيري</strong>
+            <span>الإشراف _شرعب الرونة</span>
+        </div>
+
+        <div class="main-title-block">
+            <h1>بسم الله الرحمن الرحيم</h1>
+            <h3>كشف المسابقة الرمضانية للعام <span id="displayYear">1447</span>هـ</h3>
+        </div>
+
+        <div class="date-section">
+            التاريخ: <span id="currentDate"></span>
+        </div>
+    </div>
+    <div id="teacherTitle">كشف طالبات المعلمة: <span id="printTeacherName"></span></div>
+</header>
+
+<div class="controls">
+    <div class="year-section">
+        <label>📅 سنة المسابقة:</label>
+        <select id="yearSelect" onchange="changeYear()">
+            <option value="1442">1442هـ</option>
+            <option value="1443">1443هـ</option>
+            <option value="1444">1444هـ</option>
+            <option value="1445">1445هـ</option>
+            <option value="1446">1446هـ</option>
+            <option value="1447" selected>1447هـ</option>
+            <option value="1448">1448هـ</option>
+            <option value="1449">1449هـ</option>
+            <option value="1450">1450هـ</option>
+        </select>
+    </div>
+
+    <button onclick="addNewStudent()">+ إضافة طالب/ة جديد</button>
+    
+    <div class="filter-section">
+        <label>🔍 المعلمة:</label>
+        <select id="teacherFilter" onchange="filterByTeacher()">
+            <option value="all">عرض الجميع</option>
+        </select>
+    </div>
+
+    <button class="import-btn" onclick="toggleImportTool()">💾 استيراد بيانات سابقة (Excel)</button>
+    
+    <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
+    <button class="reset-btn" onclick="resetAllData()">🗑️ حذف بيانات جميع الأعوام</button>
+    <span id="saveMsg" class="save-status">تم الحفظ ✓</span>
+    
+    <div id="importTool" style="display:none; width: 100%; margin-top: 10px; padding: 10px; border: 1px dashed #4caf50; background: #e8f5e9; border-radius: 5px;">
+        <p style="font-weight: bold; margin-top: 0;">تعليمات الاستيراد:</p>
+        <p style="font-size: 13px;">1. انسخ بيانات الأعوام السابقة في شكل تنسيق JSON التالي (من 1442 حتى 1446). 2. اضغط على الزر أدناه.</p>
+        <textarea id="importDataTextarea" rows="8" style="width: 98%; font-family: monospace; font-size: 11px; margin-bottom: 5px; box-sizing: border-box;">
+[
+    {
+        "name": "اسم الطالب/ة",
+        "teacher": "المعلمة",
+        "hifz_1442": 10,
+        "hifz_1443": 15,
+        "hifz_1446": 30 // يمكن تجاهل الأعوام الفارغة
+    }
+]
+        </textarea>
+        <button onclick="importExcelData()" style="background-color: #4caf50;">تحميل البيانات واستيرادها</button>
+        <p id="importStatus" style="color: #1b5e20; margin: 5px 0 0; font-weight: bold;"></p>
+    </div>
+    </div>
+
+<div class="table-container">
+    <table id="competitionTable">
+        <thead>
+            <tr id="tableHeaderRow1">
+                <th rowspan="2" width="30">م</th>
+                <th rowspan="2" width="140">اسم الطالبة</th>
+                <th rowspan="2" width="100">المعلمة</th>
+                <th colspan="6" class="group-history" id="historyColspanHeader">الإجمالي التراكمي في الأعوام السابقة</th>
+                <th rowspan="2" width="60" id="newPartsHeader">حفظ جديد (<span id="currentYearPlaceholder">1447</span>)</th>
+                <th rowspan="2" id="totalHifzHeader">الإجمالي التراكمي (حتى <span id="currentYearTotalPlaceholder">1447</span>)</th>
+                <th colspan="4" class="group-scores">الدرجات</th>
+                <th rowspan="2" width="50">الحالة</th>
+                <th rowspan="2">التقدير</th>
+                <th rowspan="2">المكافأة</th>
+                <th rowspan="2" width="30">ترتيب</th>
+                <th rowspan="2" class="delete-btn">حذف</th>
+            </tr>
+            <tr id="tableHeaderRow2">
+                <th class="group-history h-col-1442">1442</th>
+                <th class="group-history h-col-1443">1443</th>
+                <th class="group-history h-col-1444">1444</th>
+                <th class="group-history h-col-1445">1445</th>
+                <th class="group-history h-col-1446">1446</th> <th class="group-history h-col-cumulative" id="cumulativeTotalLabel">1446 (الإجمالي السابق)</th>
+                
+                <th class="group-scores" width="40">سنة (20)</th>
+                <th class="group-scores" width="40">تلاوة (20)</th>
+                <th class="group-scores" width="40">حفظ (60)</th>
+                <th class="group-scores" width="40">مجموع</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
+</div>
+
+<footer>
+    تصميم ا/ مختار الكمالي
+</footer>
+
+<script>
+    const START_YEAR = 1442;
+    const END_YEAR = 1450;
+    let currentYear = '1447';
+    let studentIdCounter = 0;
+    let globalStudents = [];
+
+    const tableBody = document.getElementById('tableBody');
+    const teacherFilter = document.getElementById('teacherFilter');
+    const yearSelect = document.getElementById('yearSelect');
+
+    window.onload = function() {
+        populateYearSelector();
+        const savedYear = localStorage.getItem('active_year');
+        if (savedYear) {
+            currentYear = savedYear;
+            yearSelect.value = currentYear;
+        }
+        loadGlobalStudents();
+        loadData();
+        setHeaderDate(); 
+    };
+    
+    // ************ وظائف الحفظ/التحميل لبيانات الحفظ التاريخي (الآن مستقلة) ************
+    
+    function loadHifzHistory(studentId) {
+        const storedHistory = localStorage.getItem(`hifz_history_${studentId}`);
+        // تم إضافة h1446 هنا
+        return storedHistory ? JSON.parse(storedHistory) : {
+            h1442: '', h1443: '', h1444: '', h1445: '', h1446: '' 
+        };
+    }
+
+    function saveHifzHistory(studentId, hifzData) {
+        localStorage.setItem(`hifz_history_${studentId}`, JSON.stringify(hifzData));
+    }
+    
+    function updateHifzHistory(input, studentId, yearKey) {
+        const history = loadHifzHistory(studentId);
+        history[yearKey] = input.value;
+        saveHifzHistory(studentId, history);
+        calculateRow(input, studentId);
+    }
+    
+    function setHeaderDate() {
+        const today = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = today.toLocaleDateString('ar-EG', options);
+    }
+    
+    // --- منطق الأعوام والتبديل والظهور الديناميكي ---
+
+    function populateYearSelector() {
+        yearSelect.innerHTML = '';
+        for (let year = START_YEAR; year <= END_YEAR; year++) {
+            const option = document.createElement('option');
+            option.value = year.toString();
+            option.textContent = year + 'هـ';
+            yearSelect.appendChild(option);
+        }
+    }
+
+    function changeYear() {
+        saveData(false);
+        currentYear = yearSelect.value;
+        localStorage.setItem('active_year', currentYear);
+        loadData();
+    }
+
+    function updateHeadersAndVisibility() {
+        const currentYearNum = parseInt(currentYear);
+        const cumulativeYear = currentYearNum - 1;
+
+        // 1. تحديث عناوين الأعمدة الديناميكية
+        document.getElementById('displayYear').innerText = currentYear;
+        document.getElementById('currentYearPlaceholder').innerText = currentYear;
+        document.getElementById('currentYearTotalPlaceholder').innerText = currentYear;
+        
+        const cumulativeTotalLabel = document.getElementById('cumulativeTotalLabel');
+        cumulativeTotalLabel.innerText = cumulativeYear + ' (الإجمالي السابق)';
+        const showCumulativeCol = currentYearNum > START_YEAR;
+
+        // 2. تحديث مرئية أعمدة التاريخ في رأس الجدول
+        const historyHeader1 = document.getElementById('historyColspanHeader');
+        const historyHeaders2 = document.getElementById('tableHeaderRow2').querySelectorAll('.group-history');
+        
+        let actualVisibleCount = 0;
+        
+        historyHeaders2.forEach(th => {
+            const yearMatch = th.className.match(/h-col-(\d{4})/);
+            const isCumulativeCol = th.classList.contains('h-col-cumulative');
+            
+            let isVisible = false;
+
+            if (yearMatch) {
+                const colYear = parseInt(yearMatch[1]);
+                // إظهار الأعمدة التاريخية فقط إذا كانت تسبق العام الحالي
+                if (colYear < currentYearNum) {
+                    isVisible = true;
+                }
+                
+                th.classList.toggle('hidden-col', !isVisible);
+
+            } else if (isCumulativeCol) {
+                // عمود الإجمالي السابق (h-col-cumulative)
+                isVisible = showCumulativeCol;
+                th.classList.toggle('hidden-col', !isVisible);
+            }
+            
+            if (isVisible) {
+                actualVisibleCount++;
+            }
+        });
+
+        // 3. ضبط colspan للصف الأول (لإجمالي التراكمي)
+        historyHeader1.setAttribute('colspan', actualVisibleCount);
+
+        // 4. تحديث مرئية عمود الحفظ الجديد
+        const newPartsHeader = document.getElementById('newPartsHeader');
+        const isCurrentYearActive = (currentYearNum >= START_YEAR && currentYearNum <= END_YEAR);
+        newPartsHeader.classList.toggle('hidden-col', !isCurrentYearActive);
+        
+        // تطبيق نفس منطق الإخفاء على الصفوف
+        updateRowVisibility();
+    }
+    
+    function updateRowVisibility() {
+        const currentYearNum = parseInt(currentYear);
+        const showCumulativeCol = currentYearNum > START_YEAR;
+        const isCurrentYearActive = (currentYearNum >= START_YEAR && currentYearNum <= END_YEAR);
+
+        const rows = document.querySelectorAll('#tableBody tr');
+
+        rows.forEach(row => {
+            // الأعمدة التاريخية (1442-1446)
+            for (let year = START_YEAR; year <= 1446; year++) { // تم تحديث الحد الأقصى لـ 1446
+                const col = row.querySelector(`.h-col-${year}`);
+                if (col) {
+                    const isVisible = (year < currentYearNum);
+                    col.classList.toggle('hidden-col', !isVisible);
+                }
+            }
+            
+            // عمود الإجمالي السابق التراكمي
+            const cumulativeCol = row.querySelector('.h-col-cumulative');
+            if (cumulativeCol) cumulativeCol.classList.toggle('hidden-col', !showCumulativeCol);
+            
+            // عمود الحفظ الجديد
+            const newPartsCol = row.querySelector('.inp-parts').closest('td');
+            newPartsCol.classList.toggle('hidden-col', !isCurrentYearActive);
+        });
+    }
+
+
+    // --- منطق الطلاب وقائمة المعلمين ---
+
+    function loadGlobalStudents() {
+        const storedStudents = localStorage.getItem('globalStudents');
+        if (storedStudents) {
+            globalStudents = JSON.parse(storedStudents);
+            studentIdCounter = globalStudents.length ? Math.max(...globalStudents.map(s => s.id)) + 1 : 1;
+        } else {
+            globalStudents = [];
+            studentIdCounter = 1;
+        }
+    }
+
+    function saveGlobalStudents() {
+        localStorage.setItem('globalStudents', JSON.stringify(globalStudents));
+        updateTeacherDropdown();
+    }
+    
+    function addNewStudent() {
+        const newStudent = {
+            id: studentIdCounter++,
+            name: '',
+            teacher: '',
+        };
+        globalStudents.push(newStudent);
+        saveGlobalStudents();
+        loadData();
+    }
+
+    function updateStudentName(input, studentId) {
+        const student = globalStudents.find(s => s.id === studentId);
+        if(student) {
+            student.name = input.value;
+            saveGlobalStudents();
+        }
+        saveData();
+    }
+    
+    function handleTeacherInput(input, studentId) {
+        const student = globalStudents.find(s => s.id === studentId);
+        if(student) {
+            student.teacher = input.value;
+            saveGlobalStudents();
+        }
+        calculateRow(input, studentId);
+    }
+    
+    function deleteStudent(studentId) {
+        if(confirm('هل أنت متأكد من حذف هذا الطالب من قائمة جميع الأعوام؟')) {
+            globalStudents = globalStudents.filter(s => s.id !== studentId);
+            saveGlobalStudents();
+            // حذف بيانات الأداء لكل عام
+            for (let year = START_YEAR; year <= END_YEAR; year++) {
+                localStorage.removeItem(`quran_db_${year}_${studentId}`);
+            }
+            // وحذف بيانات الحفظ التاريخي أيضاً
+            localStorage.removeItem(`hifz_history_${studentId}`);
+            loadData();
+        }
+    }
+
+    // --- منطق الصفوف والحسابات ---
+
+    function createRowHTML(student, yearData, index) {
+        const row = document.createElement('tr');
+        row.dataset.studentId = student.id;
+        
+        // تحميل بيانات الحفظ التاريخي المستقلة
+        const hifzHistory = loadHifzHistory(student.id);
+
+        const vals = {
+            // بيانات الأعوام التاريخية (محملة من التخزين المستقل)
+            h1442: hifzHistory.h1442 || '', 
+            h1443: hifzHistory.h1443 || '', 
+            h1444: hifzHistory.h1444 || '', 
+            h1445: hifzHistory.h1445 || '', 
+            h1446: hifzHistory.h1446 || '', // تم إضافة حقل 1446
+            
+            // البيانات المحسوبة (من التخزين الخاص بالعام الحالي)
+            baseHifz: yearData.baseHifz || '0', 
+            totalHifz: yearData.totalHifz || '0', 
+            
+            // بيانات العام الحالي
+            parts: yearData.parts || '', 
+            annual: yearData.annual || '', recitation: yearData.recitation || '', memorization: yearData.memorization || '',
+            total: yearData.total || '0', grade: yearData.grade || '', prize: yearData.prize || '0', rank: yearData.rank || '-'
+        };
+        
+        // حساب حالة الطالب
+        const isActive = (parseFloat(vals.parts) > 0 || parseFloat(vals.total) > 0);
+        const statusText = isActive ? "نشط" : "منقطع";
+        const statusClass = isActive ? "status-active" : "status-absent";
+
+
+        row.innerHTML = `
+            <td class="row-index">${index}</td>
+            <td><input type="text" class="inp-name" value="${student.name || ''}" oninput="updateStudentName(this, ${student.id})" placeholder="الاسم"></td>
+            <td><input type="text" class="inp-teacher" value="${student.teacher || ''}" oninput="handleTeacherInput(this, ${student.id})" placeholder="المعلمة"></td>
+            
+            <td class="group-history h-col-1442"><input type="number" class="inp-hifz-year h1442" value="${vals.h1442}" placeholder="0" oninput="updateHifzHistory(this, ${student.id}, 'h1442')"></td>
+            <td class="group-history h-col-1443"><input type="number" class="inp-hifz-year h1443" value="${vals.h1443}" placeholder="0" oninput="updateHifzHistory(this, ${student.id}, 'h1443')"></td>
+            <td class="group-history h-col-1444"><input type="number" class="inp-hifz-year h1444" value="${vals.h1444}" placeholder="0" oninput="updateHifzHistory(this, ${student.id}, 'h1444')"></td>
+            <td class="group-history h-col-1445"><input type="number" class="inp-hifz-year h1445" value="${vals.h1445}" placeholder="0" oninput="updateHifzHistory(this, ${student.id}, 'h1445')"></td>
+            <td class="group-history h-col-1446"><input type="number" class="inp-hifz-year h1446" value="${vals.h1446}" placeholder="0" oninput="updateHifzHistory(this, ${student.id}, 'h1446')"></td> <td class="group-history h-col-cumulative inp-h46"><input type="text" class="readonly-field" value="${vals.baseHifz}" readonly></td>
+            
+            <td><input type="number" class="inp-parts" value="${vals.parts}" placeholder="0" min="0" oninput="calculateRow(this, ${student.id})"></td>
+            
+            <td><input type="text" class="readonly-field inp-totalHifz" value="${vals.totalHifz}" readonly></td>
+            
+            <td><input type="number" class="score annual" value="${vals.annual}" min="0" max="20" oninput="validateAndCalc(this, ${student.id})"></td>
+            <td><input type="number" class="score recitation" value="${vals.recitation}" min="0" max="20" oninput="validateAndCalc(this, ${student.id})"></td>
+            <td><input type="number" class="score memorization" value="${vals.memorization}" min="0" max="60" oninput="validateAndCalc(this, ${student.id})"></td>
+            
+            <td><input type="text" class="readonly-field total" value="${vals.total}" readonly></td>
+            
+            <td class="${statusClass}">${statusText}</td>
+            
+            <td><input type="text" class="readonly-field grade" value="${vals.grade}" readonly></td>
+            
+            <td><input type="text" class="readonly-field inp-prize" value="${vals.prize}" readonly></td>
+            <td><input type="text" class="readonly-field rank" value="${vals.rank}" readonly></td>
+            
+            <td class="delete-btn"><button onclick="deleteStudent(${student.id})" style="background:#d32f2f; padding:2px 8px; font-size:12px;">X</button></td>
+        `;
+        return row;
+    }
+
+    function validateAndCalc(input, studentId) {
+        let max = parseFloat(input.getAttribute('max'));
+        let min = parseFloat(input.getAttribute('min'));
+        let val = parseFloat(input.value);
+
+        if (val > max) { alert(`الحد الأقصى هو ${max}`); input.value = max; }
+        if (val < min) input.value = min;
+        
+        calculateRow(input, studentId);
+    }
+
+    function calculateRow(inputElement, studentId) {
+        const row = inputElement.closest('tr');
+        
+        // 1. حساب الإجمالي التراكمي للعام السابق (BaseHifz)
+        // يتم استخدام قيم المدخلات الحالية في الصف (التي يتم تحميلها من التخزين الدائم)
+        const hifzYearsValues = [
+            parseFloat(row.querySelector('.h1442').value) || 0,
+            parseFloat(row.querySelector('.h1443').value) || 0,
+            parseFloat(row.querySelector('.h1444').value) || 0,
+            parseFloat(row.querySelector('.h1445').value) || 0,
+            parseFloat(row.querySelector('.h1446').value) || 0 // تم إضافة 1446
+        ];
+
+        // القاعدة: الإجمالي السابق هو أكبر رقم تم إدخاله في الأعوام السابقة (الرصيد التراكمي الأحدث).
+        let baseHifz = 0;
+        hifzYearsValues.forEach(h => {
+            if (h > baseHifz) {
+                baseHifz = h;
+            }
+        });
+        
+        row.querySelector('.inp-h46 input').value = baseHifz;
+        
+        // 2. الحفظ الجديد (للعام الحالي)
+        const parts = parseFloat(row.querySelector('.inp-parts').value) || 0;
+
+        // 3. حساب إجمالي الحفظ النهائي
+        const totalHifz = baseHifz + parts;
+        row.querySelector('.inp-totalHifz').value = totalHifz;
+        
+        // 4. حساب الدرجات والتقدير
+        const annual = parseFloat(row.querySelector('.annual').value) || 0;
+        const recitation = parseFloat(row.querySelector('.recitation').value) || 0;
+        const memorization = parseFloat(row.querySelector('.memorization').value) || 0;
+
+        let totalScore = annual + recitation + memorization;
+        if(totalScore > 100) totalScore = 100;
+        row.querySelector('.total').value = totalScore;
+
+        let gradeText = "";
+        let pricePerPart = 0;
+
+        if (totalScore >= 90) { gradeText = "ممتاز"; pricePerPart = 2000; }
+        else if (totalScore >= 80) { gradeText = "جيد جداً"; pricePerPart = 1500; }
+        else if (totalScore >= 70) { gradeText = "جيد"; pricePerPart = 1000; }
+        else if (totalScore >= 60) { gradeText = "مقبول"; pricePerPart = 500; }
+        else if (totalScore > 0) { gradeText = "ضعيف"; pricePerPart = 0; }
+        
+        row.querySelector('.grade').value = gradeText;
+
+        // 5. تحديث عمود الحالة بناء على وجود بيانات
+        const isActive = (parts > 0 || totalScore > 0);
+        const statusCell = row.querySelector('td:nth-child(16)'); // تم تغيير الترتيب بسبب إضافة عمود 1446
+        statusCell.innerText = isActive ? "نشط" : "منقطع";
+        statusCell.className = isActive ? 'status-active' : 'status-absent';
+
+
+        // 6. حساب المكافأة
+        let prizeAmount = (parts >= 1) ? (parts * pricePerPart) : 0;
+        row.querySelector('.inp-prize').value = prizeAmount.toLocaleString();
+
+        updateRankings();
+        saveData();
+    }
+
+    function updateRankings() {
+        const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+        let scores = rows.map(row => {
+            return {
+                rowElement: row,
+                total: parseFloat(row.querySelector('.total').value) || 0
+            };
+        });
+        scores.sort((a, b) => b.total - a.total);
+        let currentRank = 1;
+        scores.forEach((item) => {
+            if(item.total > 0) {
+                item.rowElement.querySelector('.rank').value = currentRank;
+                currentRank++;
+            } else {
+                item.rowElement.querySelector('.rank').value = "-";
+            }
+        });
+    }
+
+    // --- تخزين قواعد البيانات (متعددة) ---
+    
+    function saveData(showMsg = true) {
+        const rows = document.querySelectorAll('#tableBody tr');
+        rows.forEach(row => {
+            const studentId = parseInt(row.dataset.studentId);
+            
+            // حفظ البيانات الخاصة بالعام الحالي فقط
+            const data = {
+                // البيانات المحسوبة (تُحفظ للعام الحالي)
+                baseHifz: row.querySelector('.inp-h46 input').value, 
+                totalHifz: row.querySelector('.inp-totalHifz').value,
+                
+                // بيانات العام الحالي (تُحفظ للعام الحالي)
+                parts: row.querySelector('.inp-parts').value,
+                annual: row.querySelector('.annual').value,
+                recitation: row.querySelector('.recitation').value,
+                memorization: row.querySelector('.memorization').value,
+                total: row.querySelector('.total').value,
+                grade: row.querySelector('.grade').value,
+                prize: row.querySelector('.inp-prize').value,
+                rank: row.querySelector('.rank').value
+            };
+            
+            localStorage.setItem(`quran_db_${currentYear}_${studentId}`, JSON.stringify(data));
+        });
+        
+        if (showMsg) {
+            const msg = document.getElementById('saveMsg');
+            msg.style.opacity = 1;
+            setTimeout(() => { msg.style.opacity = 0; }, 1500);
+        }
+    }
+
+    function loadData() {
+        tableBody.innerHTML = '';
+        
+        let visibleIndex = 1;
+        
+        globalStudents.forEach(student => {
+            // تحميل البيانات الخاصة بالعام الحالي (فقط الأداء والدرجات)
+            const storedData = localStorage.getItem(`quran_db_${currentYear}_${student.id}`);
+            let yearData = storedData ? JSON.parse(storedData) : {};
+            
+            const row = createRowHTML(student, yearData, visibleIndex++);
+            tableBody.appendChild(row);
+            
+            // يتم تشغيل الحسابات يدوياً بعد إضافة الصف لضمان تحديث الإجماليات والحالة
+            calculateRow(row.querySelector('.inp-parts'), student.id);
+        });
+        
+        // تحديث الرؤوس والأعمدة الديناميكية في الصفوف
+        updateHeadersAndVisibility();
+        updateTeacherDropdown();
+        filterByTeacher();
+    }
+    
+    // ************ وظائف استيراد البيانات الجديدة ************
+    
+    function toggleImportTool() {
+        const tool = document.getElementById('importTool');
+        tool.style.display = (tool.style.display === 'none') ? 'block' : 'none';
+        document.getElementById('importStatus').innerText = '';
+    }
+
+    function importExcelData() {
+        const textarea = document.getElementById('importDataTextarea');
+        const statusMsg = document.getElementById('importStatus');
+        statusMsg.innerText = '';
+        
+        let importedData;
+        try {
+            importedData = JSON.parse(textarea.value.trim());
+        } catch (e) {
+            statusMsg.style.color = 'red';
+            statusMsg.innerText = 'خطأ: صيغة البيانات ليست JSON صحيحة. يرجى مراجعة التنسيق.';
+            return;
+        }
+
+        if (!Array.isArray(importedData)) {
+            statusMsg.style.color = 'red';
+            statusMsg.innerText = 'خطأ: يجب أن تكون البيانات في شكل قائمة (Array) من الطلاب.';
+            return;
+        }
+
+        let addedCount = 0;
+        let updatedCount = 0;
+        let errors = false;
+
+        importedData.forEach(item => {
+            const { name, teacher, hifz_1442, hifz_1443, hifz_1444, hifz_1445, hifz_1446 } = item;
+
+            if (!name || !teacher) {
+                console.error('Skipping entry due to missing name or teacher:', item);
+                errors = true;
+                return;
+            }
+
+            // 1. Find or Add Student to globalStudents (Matching by Name AND Teacher)
+            let student = globalStudents.find(s => s.name.trim() === name.trim() && s.teacher.trim() === teacher.trim());
+
+            if (!student) {
+                student = {
+                    id: studentIdCounter++,
+                    name: name.trim(),
+                    teacher: teacher.trim(),
+                };
+                globalStudents.push(student);
+                addedCount++;
+            } else {
+                updatedCount++;
+            }
+
+            // 2. Save Hifz History (Permanent Storage)
+            const hifzData = loadHifzHistory(student.id);
+            
+            // Map imported hifz totals to permanent storage fields (Only updates if value is provided)
+            hifzData.h1442 = hifz_1442 !== undefined ? hifz_1442.toString() : hifzData.h1442;
+            hifzData.h1443 = hifz_1443 !== undefined ? hifz_1443.toString() : hifzData.h1443;
+            hifzData.h1444 = hifz_1444 !== undefined ? hifz_1444.toString() : hifzData.h1444;
+            hifzData.h1445 = hifz_1445 !== undefined ? hifz_1445.toString() : hifzData.h1445;
+            hifzData.h1446 = hifz_1446 !== undefined ? hifz_1446.toString() : hifzData.h1446;
+
+            saveHifzHistory(student.id, hifzData);
+        });
+
+        saveGlobalStudents(); 
+        loadData(); // Reload table to reflect imported data
+        
+        statusMsg.style.color = errors ? 'orange' : '#1b5e20';
+        statusMsg.innerText = `تم الاستيراد بنجاح! تم إضافة ${addedCount} طالب وتحديث بيانات ${updatedCount} طالب.`;
+        if (errors) { statusMsg.innerText += ' (تجاهل بعض الإدخالات بسبب نقص الاسم/المعلمة).'; }
+        textarea.value = ''; 
+    }
+    // ************ نهاية وظائف استيراد البيانات ************
+
+    // --- منطق الفلترة والحذف (لم يتغير) ---
+
+    function updateTeacherDropdown() {
+        const teachers = new Set(globalStudents.map(s => s.teacher).filter(t => t.trim() !== ''));
+        const currentSelection = teacherFilter.value;
+        teacherFilter.innerHTML = '<option value="all">عرض الجميع</option>';
+        teachers.forEach(teacher => {
+            const option = document.createElement('option');
+            option.value = teacher;
+            option.textContent = teacher;
+            teacherFilter.appendChild(option);
+        });
+        if ([...teachers].includes(currentSelection) || currentSelection === 'all') {
+            teacherFilter.value = currentSelection;
+        } else { teacherFilter.value = 'all'; }
+    }
+
+    function filterByTeacher() {
+        const selectedTeacher = teacherFilter.value;
+        const rows = document.querySelectorAll('#tableBody tr');
+        const titleDiv = document.getElementById('teacherTitle');
+        const printNameSpan = document.getElementById('printTeacherName');
+        let visibleIndex = 1;
+        
+        rows.forEach(row => {
+            const studentId = parseInt(row.dataset.studentId);
+            const student = globalStudents.find(s => s.id === studentId);
+            const rowTeacher = student ? student.teacher.trim() : '';
+            
+            if (selectedTeacher === 'all' || rowTeacher === selectedTeacher) {
+                row.classList.remove('hidden-row');
+                row.querySelector('.row-index').innerText = visibleIndex++;
+            } else { 
+                row.classList.add('hidden-row'); 
+            }
+        });
+
+        if(selectedTeacher !== 'all') {
+            titleDiv.classList.add('active-print-title');
+            printNameSpan.textContent = selectedTeacher;
+        } else { titleDiv.classList.remove('active-print-title'); }
+    }
+
+    function resetAllData() {
+        if(confirm('تحذير: سيتم مسح جميع بيانات جميع الأعوام وقائمة الطلاب نهائياً!')) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+</script>
+
+</body>
+</html>
