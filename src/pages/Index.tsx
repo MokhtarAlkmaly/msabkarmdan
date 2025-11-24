@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
+import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { Plus, Printer, Trash2, Calendar } from "lucide-react";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -157,6 +158,9 @@ const Index = () => {
 
       {/* Controls */}
       <div className="container mx-auto px-4 py-6 print:hidden space-y-4">
+        {/* Notifications System */}
+        <NotificationSystem students={students} currentYear={currentYear} />
+
         {/* Import/Export Section */}
         <ImportExport onDataImported={loadData} />
 
