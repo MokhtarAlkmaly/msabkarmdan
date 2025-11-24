@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useMemo, useState } from "react";
 import { Student } from "@/types/student";
 import { analyzeStudents, getAlertStats } from "@/utils/notifications";
