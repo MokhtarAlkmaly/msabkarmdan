@@ -28,8 +28,8 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
   const [history, setHistory] = useState(loadHifzHistory(student.id));
   const [yearData, setYearData] = useState(loadYearData(currentYear, student.id));
 
-  // تحديد إذا كان العام السابق (فقط عرض البيانات المحفوظة) أو الحالي (إعادة الحساب)
-  const isPastYear = currentYearNum < 1447; // العام الحالي هو 1447
+  // تحديد إذا كان العام السابق (فقط عرض البيانات المحفوظة) أو الحالي/جديد (إعادة الحساب)
+  const isPastYear = currentYearNum < 1447; // الأعوام قبل 1447 فقط read-only
 
   // حساب القيم للعام الحالي فقط
   const baseHifz = isPastYear 
