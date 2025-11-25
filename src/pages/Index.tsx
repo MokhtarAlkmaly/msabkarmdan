@@ -6,6 +6,7 @@ import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { Plus, Printer, Trash2, Calendar } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadGlobalStudents,
@@ -139,6 +140,10 @@ const Index = () => {
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-6 px-4 print:py-4">
         <div className="container mx-auto">
+          <div className="flex flex-col items-center mb-4">
+            <img src={logo} alt="مركز إنماء الأهلي الخيري" className="h-24 w-auto mb-4 print:h-20" />
+          </div>
+          
           <div className="flex justify-between items-start mb-4 print:mb-2">
             <div className="text-sm text-primary-foreground/90">
               <div className="font-bold">مركز إنماء الأهلي الخيري</div>
