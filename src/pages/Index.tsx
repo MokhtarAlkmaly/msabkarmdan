@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { Plus, Printer, Trash2, Calendar } from "lucide-react";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -132,6 +133,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
+      {/* Install Prompt */}
+      <InstallPrompt />
+      
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-6 px-4 print:py-4">
         <div className="container mx-auto">
