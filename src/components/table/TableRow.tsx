@@ -28,33 +28,52 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
   const [history, setHistory] = useState(loadHifzHistory(student.id));
   const [yearData, setYearData] = useState(loadYearData(currentYear, student.id));
 
-  // حساب القيم
-  const baseHifz = calculateBaseHifz(history, currentYearNum);
+  // تحديد إذا كان العام السابق (فقط عرض البيانات المحفوظة) أو الحالي (إعادة الحساب)
+  const isPastYear = currentYearNum < 1447; // العام الحالي هو 1447
+
+  // حساب القيم للعام الحالي فقط
+  const baseHifz = isPastYear 
+    ? parseFloat(yearData.baseHifz) || 0
+    : calculateBaseHifz(history, currentYearNum);
+  
   const parts = parseFloat(yearData.parts) || 0;
-  const totalHifz = baseHifz + parts;
+  
+  const totalHifz = isPastYear
+    ? parseFloat(yearData.totalHifz) || 0
+    : baseHifz + parts;
 
   const annual = parseFloat(yearData.annual) || 0;
   const recitation = parseFloat(yearData.recitation) || 0;
   const memorization = parseFloat(yearData.memorization) || 0;
-  const totalScore = Math.min(annual + recitation + memorization, 100);
+  
+  const totalScore = isPastYear
+    ? parseFloat(yearData.total) || 0
+    : Math.min(annual + recitation + memorization, 100);
 
-  const { grade, pricePerPart } = calculateGrade(totalScore);
-  const prize = calculatePrize(parts, pricePerPart);
+  const { grade: calculatedGrade, pricePerPart: calculatedPricePerPart } = calculateGrade(totalScore);
+  
+  const grade = isPastYear ? yearData.grade : calculatedGrade;
+  const pricePerPart = isPastYear ? 0 : calculatedPricePerPart;
+  const prize = isPastYear 
+    ? parseFloat(yearData.prize) || 0
+    : calculatePrize(parts, pricePerPart);
 
   const isActive = parts > 0 || totalScore > 0;
 
   useEffect(() => {
-    // تحديث البيانات المحسوبة
-    const updatedData = {
-      ...yearData,
-      baseHifz: baseHifz.toString(),
-      totalHifz: totalHifz.toString(),
-      total: totalScore.toString(),
-      grade,
-      prize: prize.toString(),
-    };
-    saveYearData(currentYear, student.id, updatedData);
-  }, [baseHifz, totalHifz, totalScore, grade, prize, currentYear, student.id]);
+    // تحديث البيانات المحسوبة فقط للعام الحالي
+    if (!isPastYear) {
+      const updatedData = {
+        ...yearData,
+        baseHifz: baseHifz.toString(),
+        totalHifz: totalHifz.toString(),
+        total: totalScore.toString(),
+        grade,
+        prize: prize.toString(),
+      };
+      saveYearData(currentYear, student.id, updatedData);
+    }
+  }, [isPastYear, baseHifz, totalHifz, totalScore, grade, prize, currentYear, student.id]);
 
   const updateName = (value: string) => {
     setName(value);
@@ -80,6 +99,9 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
   };
 
   const updateYearField = (field: keyof typeof yearData, value: string) => {
+    // للأعوام السابقة، لا نسمح بالتعديل
+    if (isPastYear) return;
+    
     const updated = { ...yearData, [field]: value };
     setYearData(updated);
     saveYearData(currentYear, student.id, updated);
@@ -143,6 +165,7 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
           onChange={(e) => updateYearField('parts', e.target.value)}
           placeholder="0"
           min="0"
+          disabled={isPastYear}
           className="text-center border-0 focus-visible:ring-1 w-20 font-semibold"
         />
       </td>
@@ -165,6 +188,7 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
           placeholder="0"
           min="0"
           max="20"
+          disabled={isPastYear}
           className="text-center border-0 focus-visible:ring-1 w-16"
         />
       </td>
@@ -177,6 +201,7 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
           placeholder="0"
           min="0"
           max="20"
+          disabled={isPastYear}
           className="text-center border-0 focus-visible:ring-1 w-16"
         />
       </td>
@@ -189,6 +214,7 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
           placeholder="0"
           min="0"
           max="60"
+          disabled={isPastYear}
           className="text-center border-0 focus-visible:ring-1 w-16"
         />
       </td>
