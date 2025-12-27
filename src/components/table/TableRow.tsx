@@ -148,14 +148,6 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
         );
       })}
 
-      {/* الإجمالي السابق */}
-      <td className="border border-border p-1 bg-islamic-gold/10">
-        <Input
-          value={baseHifz}
-          readOnly
-          className="text-center border-0 bg-transparent font-bold text-islamic-green"
-        />
-      </td>
 
       {/* حفظ جديد */}
       <td className="border border-border p-1 bg-warning/10">

@@ -13,7 +13,7 @@ export const TableHeader = ({ currentYear }: Props) => {
         <th rowSpan={2} className="border border-border p-2 min-w-[150px]">اسم الطالبة</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[120px]">المعلمة</th>
         <th colSpan={6} className="border border-border p-2 bg-accent/20">
-          الإجمالي التراكمي في الأعوام السابقة
+          الحفظ في الأعوام السابقة
         </th>
         <th rowSpan={2} className="border border-border p-2 min-w-[80px]">
           حفظ جديد ({currentYear})
@@ -39,9 +39,6 @@ export const TableHeader = ({ currentYear }: Props) => {
             {year}
           </th>
         ))}
-        <th className="border border-border p-2 min-w-[80px] bg-accent/20">
-          {previousYear} (الإجمالي السابق)
-        </th>
         <th className="border border-border p-2 min-w-[70px] bg-success/20">سنة (20)</th>
         <th className="border border-border p-2 min-w-[70px] bg-success/20">تلاوة (20)</th>
         <th className="border border-border p-2 min-w-[70px] bg-success/20">حفظ (60)</th>
