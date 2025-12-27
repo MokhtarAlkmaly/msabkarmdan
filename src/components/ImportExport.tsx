@@ -40,6 +40,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
       const allYearsData: Record<string, any> = {
         'الاسم': student.name,
         'المعلمة': student.teacher,
+        'حفظ_1441': history.h1441 || '',
         'حفظ_1442': history.h1442 || '',
         'حفظ_1443': history.h1443 || '',
         'حفظ_1444': history.h1444 || '',
@@ -140,6 +141,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
           // استيراد بيانات الحفظ التاريخي
           const history = loadHifzHistory(student.id);
           
+          if (row['حفظ_1441']) history.h1441 = row['حفظ_1441'].toString();
           if (row['حفظ_1442']) history.h1442 = row['حفظ_1442'].toString();
           if (row['حفظ_1443']) history.h1443 = row['حفظ_1443'].toString();
           if (row['حفظ_1444']) history.h1444 = row['حفظ_1444'].toString();
@@ -204,6 +206,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
       {
         'الاسم': 'مثال: فاطمة أحمد',
         'المعلمة': 'مثال: المعلمة نورة',
+        'حفظ_1441': '3',
         'حفظ_1442': '5',
         'حفظ_1443': '10',
         'حفظ_1444': '15',
@@ -221,7 +224,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "قالب البيانات");
 
     // تحسين عرض الأعمدة
-    worksheet['!cols'] = Array(11).fill({ wch: 20 });
+    worksheet['!cols'] = Array(12).fill({ wch: 20 });
 
     XLSX.writeFile(workbook, 'قالب_استيراد_البيانات.xlsx');
 

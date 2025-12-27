@@ -29,7 +29,7 @@ export const TableHeader = ({ currentYear }: Props) => {
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">حذف</th>
       </tr>
       <tr>
-        {[1442, 1443, 1444, 1445, 1446].map(year => (
+        {[1441, 1442, 1443, 1444, 1445, 1446].map(year => (
           <th
             key={year}
             className={`border border-border p-2 min-w-[60px] bg-accent/20 ${

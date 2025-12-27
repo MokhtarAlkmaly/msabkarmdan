@@ -3,6 +3,7 @@ import { HifzHistory } from "@/types/student";
 // الحساب الصحيح: يأخذ فقط الأعوام قبل العام الحالي
 export const calculateBaseHifz = (history: HifzHistory, currentYear: number): number => {
   const yearValues: Record<number, number> = {
+    1441: parseFloat(history.h1441) || 0,
     1442: parseFloat(history.h1442) || 0,
     1443: parseFloat(history.h1443) || 0,
     1444: parseFloat(history.h1444) || 0,
@@ -13,7 +14,7 @@ export const calculateBaseHifz = (history: HifzHistory, currentYear: number): nu
   let baseHifz = 0;
   
   // نأخذ فقط الأعوام التي تسبق العام الحالي
-  for (let year = 1442; year < currentYear; year++) {
+  for (let year = 1441; year < currentYear; year++) {
     const value = yearValues[year] || 0;
     if (value > baseHifz) {
       baseHifz = value;
