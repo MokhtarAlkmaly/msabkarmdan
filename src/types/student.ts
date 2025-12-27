@@ -1,4 +1,5 @@
 export interface HifzHistory {
+  h1441: string;
   h1442: string;
   h1443: string;
   h1444: string;
@@ -27,5 +28,5 @@ export interface Student {
   yearData?: YearData;
 }
 
-export const START_YEAR = 1442;
+export const START_YEAR = 1441;
 export const END_YEAR = 1450;

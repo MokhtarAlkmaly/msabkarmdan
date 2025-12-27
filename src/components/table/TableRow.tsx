@@ -131,7 +131,7 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
       </td>
 
       {/* أعمدة السنوات السابقة */}
-      {([1442, 1443, 1444, 1445, 1446] as const).map(year => {
+      {([1441, 1442, 1443, 1444, 1445, 1446] as const).map(year => {
         const key = `h${year}` as keyof typeof history;
         const isDisabled = year >= currentYearNum;
         return (

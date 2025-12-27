@@ -12,6 +12,7 @@ export const saveGlobalStudents = (students: Student[]) => {
 export const loadHifzHistory = (studentId: number): HifzHistory => {
   const stored = localStorage.getItem(`hifz_history_${studentId}`);
   return stored ? JSON.parse(stored) : {
+    h1441: '',
     h1442: '',
     h1443: '',
     h1444: '',
