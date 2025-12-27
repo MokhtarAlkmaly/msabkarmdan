@@ -39,7 +39,6 @@ export const ImportExport = ({ onDataImported }: Props) => {
       // جمع بيانات جميع الأعوام
       const allYearsData: Record<string, any> = {
         'الاسم': student.name,
-        'المعلمة': student.teacher,
         'حفظ_1441': history.h1441 || '',
         'حفظ_1442': history.h1442 || '',
         'حفظ_1443': history.h1443 || '',
@@ -119,19 +118,16 @@ export const ImportExport = ({ onDataImported }: Props) => {
 
         jsonData.forEach((row: any) => {
           const name = row['الاسم']?.toString().trim();
-          const teacher = row['المعلمة']?.toString().trim();
 
-          if (!name || !teacher) return;
+          if (!name) return;
 
-          // البحث عن الطالبة بالاسم والمعلمة
-          let student = existingStudents.find(
-            s => s.name === name && s.teacher === teacher
-          );
+          // البحث عن الطالبة بالاسم
+          let student = existingStudents.find(s => s.name === name);
 
           if (!student) {
             // إضافة طالبة جديدة
             maxId++;
-            student = { id: maxId, name, teacher };
+            student = { id: maxId, name, teacher: '' };
             existingStudents.push(student);
             importedCount++;
           } else {
@@ -205,7 +201,6 @@ export const ImportExport = ({ onDataImported }: Props) => {
     const templateData = [
       {
         'الاسم': 'مثال: فاطمة أحمد',
-        'المعلمة': 'مثال: المعلمة نورة',
         'حفظ_1441': '3',
         'حفظ_1442': '5',
         'حفظ_1443': '10',
@@ -224,7 +219,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "قالب البيانات");
 
     // تحسين عرض الأعمدة
-    worksheet['!cols'] = Array(12).fill({ wch: 20 });
+    worksheet['!cols'] = Array(11).fill({ wch: 20 });
 
     XLSX.writeFile(workbook, 'قالب_استيراد_البيانات.xlsx');
 
@@ -288,7 +283,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
         <p className="font-semibold text-foreground">📝 تعليمات الاستيراد:</p>
         <ul className="space-y-1 text-muted-foreground mr-4">
           <li>• نزّل القالب وافتحه في Excel</li>
-          <li>• عبّئ البيانات (الاسم والمعلمة إلزامية)</li>
+          <li>• عبّئ البيانات (الاسم إلزامي)</li>
           <li>• احفظ الملف واستورده هنا</li>
           <li>• سيتم دمج البيانات مع البيانات الموجودة</li>
         </ul>
