@@ -139,18 +139,21 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
         />
       </td>
 
-      {/* أعمدة السنوات السابقة */}
+      {/* أعمدة الحفظ التراكمي للسنوات السابقة */}
       {years.map(year => {
-        const key = `h${year}` as keyof typeof history;
+        // حساب الحفظ التراكمي لهذه السنة = مجموع الحفظ من 1441 حتى هذه السنة
+        let cumulativeHifz = 0;
+        for (let y = 1441; y <= year; y++) {
+          const key = `h${y}`;
+          cumulativeHifz += parseFloat(history[key]) || 0;
+        }
+        cumulativeHifz = Math.min(cumulativeHifz, 30);
+        
+        const yearIsKhatim = cumulativeHifz >= 30;
+        
         return (
-          <td key={year} className="border border-border p-1 bg-accent/5">
-            <Input
-              type="number"
-              value={history[key] || ''}
-              onChange={(e) => updateHistory(key, e.target.value)}
-              placeholder="0"
-              className="text-center border-0 focus-visible:ring-1 w-16"
-            />
+          <td key={year} className={`border border-border p-1 text-center font-semibold ${yearIsKhatim ? 'bg-islamic-gold/20 text-islamic-gold' : 'bg-accent/10'}`}>
+            {yearIsKhatim ? 'خاتم ✨' : (cumulativeHifz > 0 ? cumulativeHifz : '-')}
           </td>
         );
       })}
