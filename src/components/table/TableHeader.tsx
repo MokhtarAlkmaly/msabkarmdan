@@ -4,7 +4,12 @@ interface Props {
 
 export const TableHeader = ({ currentYear }: Props) => {
   const currentYearNum = parseInt(currentYear);
-  const previousYear = currentYearNum - 1;
+  
+  // توليد قائمة السنوات من 1441 حتى السنة السابقة للسنة المختارة
+  const years: number[] = [];
+  for (let year = 1441; year < currentYearNum; year++) {
+    years.push(year);
+  }
 
   return (
     <thead className="bg-primary text-primary-foreground sticky top-0 z-10">
@@ -12,9 +17,11 @@ export const TableHeader = ({ currentYear }: Props) => {
         <th rowSpan={2} className="border border-border p-2 min-w-[50px]">م</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[150px]">اسم الطالبة</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[120px]">المعلمة</th>
-        <th colSpan={6} className="border border-border p-2 bg-accent/20">
-          الحفظ في الأعوام السابقة
-        </th>
+        {years.length > 0 && (
+          <th colSpan={years.length} className="border border-border p-2 bg-accent/20">
+            الحفظ في الأعوام السابقة
+          </th>
+        )}
         <th rowSpan={2} className="border border-border p-2 min-w-[80px]">
           حفظ جديد ({currentYear})
         </th>
@@ -29,12 +36,10 @@ export const TableHeader = ({ currentYear }: Props) => {
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">حذف</th>
       </tr>
       <tr>
-        {[1441, 1442, 1443, 1444, 1445, 1446].map(year => (
+        {years.map(year => (
           <th
             key={year}
-            className={`border border-border p-2 min-w-[60px] bg-accent/20 ${
-              year >= currentYearNum ? 'opacity-30' : ''
-            }`}
+            className="border border-border p-2 min-w-[60px] bg-accent/20"
           >
             {year}
           </th>

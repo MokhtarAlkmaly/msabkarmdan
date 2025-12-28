@@ -28,6 +28,12 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
   const [history, setHistory] = useState(loadHifzHistory(student.id));
   const [yearData, setYearData] = useState(loadYearData(currentYear, student.id));
 
+  // توليد قائمة السنوات من 1441 حتى السنة السابقة للسنة المختارة
+  const years: number[] = [];
+  for (let year = 1441; year < currentYearNum; year++) {
+    years.push(year);
+  }
+
   // تحديد إذا كان العام السابق (فقط عرض البيانات المحفوظة) أو الحالي/جديد (إعادة الحساب)
   const isPastYear = currentYearNum < 1447; // الأعوام قبل 1447 فقط read-only
 
@@ -59,6 +65,9 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
     : calculatePrize(parts, pricePerPart);
 
   const isActive = parts > 0 || totalScore > 0;
+  
+  // التحقق إذا كانت الطالبة خاتمة (أتمت 30 جزء)
+  const isKhatim = totalHifz >= 30;
 
   useEffect(() => {
     // تحديث البيانات المحسوبة فقط للعام الحالي
@@ -131,16 +140,14 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
       </td>
 
       {/* أعمدة السنوات السابقة */}
-      {([1441, 1442, 1443, 1444, 1445, 1446] as const).map(year => {
+      {years.map(year => {
         const key = `h${year}` as keyof typeof history;
-        const isDisabled = year >= currentYearNum;
         return (
-          <td key={year} className={`border border-border p-1 bg-accent/5 ${isDisabled ? 'opacity-30' : ''}`}>
+          <td key={year} className="border border-border p-1 bg-accent/5">
             <Input
               type="number"
-              value={history[key]}
+              value={history[key] || ''}
               onChange={(e) => updateHistory(key, e.target.value)}
-              disabled={isDisabled}
               placeholder="0"
               className="text-center border-0 focus-visible:ring-1 w-16"
             />
@@ -163,12 +170,16 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
       </td>
 
       {/* الإجمالي التراكمي */}
-      <td className="border border-border p-1 bg-islamic-green/10">
-        <Input
-          value={totalHifz}
-          readOnly
-          className="text-center border-0 bg-transparent font-bold text-islamic-green"
-        />
+      <td className={`border border-border p-1 ${isKhatim ? 'bg-islamic-gold/20' : 'bg-islamic-green/10'}`}>
+        {isKhatim ? (
+          <span className="text-center font-bold text-islamic-gold block">خاتم ✨</span>
+        ) : (
+          <Input
+            value={totalHifz}
+            readOnly
+            className="text-center border-0 bg-transparent font-bold text-islamic-green"
+          />
+        )}
       </td>
 
       {/* الدرجات */}
