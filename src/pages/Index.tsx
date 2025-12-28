@@ -15,6 +15,7 @@ import {
   setActiveYear,
   loadHifzHistory,
   loadYearData,
+  migrateYearData,
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -45,6 +46,10 @@ const Index = () => {
   }, [currentYear]);
 
   const handleYearChange = (year: string) => {
+    // ترحيل بيانات العام السابق للتاريخ
+    const globalStudents = loadGlobalStudents();
+    migrateYearData(year, globalStudents);
+    
     setCurrentYear(year);
     setActiveYear(year);
     toast({

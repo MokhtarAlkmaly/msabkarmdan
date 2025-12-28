@@ -1,10 +1,6 @@
+// تاريخ الحفظ ديناميكي - يمكن إضافة أي سنة
 export interface HifzHistory {
-  h1441: string;
-  h1442: string;
-  h1443: string;
-  h1444: string;
-  h1445: string;
-  h1446: string;
+  [key: string]: string; // h1441, h1442, h1443, etc.
 }
 
 export interface YearData {

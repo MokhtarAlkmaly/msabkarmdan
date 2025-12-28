@@ -11,14 +11,7 @@ export const saveGlobalStudents = (students: Student[]) => {
 
 export const loadHifzHistory = (studentId: number): HifzHistory => {
   const stored = localStorage.getItem(`hifz_history_${studentId}`);
-  return stored ? JSON.parse(stored) : {
-    h1441: '',
-    h1442: '',
-    h1443: '',
-    h1444: '',
-    h1445: '',
-    h1446: ''
-  };
+  return stored ? JSON.parse(stored) : {};
 };
 
 export const saveHifzHistory = (studentId: number, history: HifzHistory) => {
@@ -51,4 +44,23 @@ export const getActiveYear = (): string => {
 
 export const setActiveYear = (year: string) => {
   localStorage.setItem('active_year', year);
+};
+
+// ترحيل بيانات العام السابق للتاريخ عند الانتقال لعام جديد
+export const migrateYearData = (newYear: string, students: { id: number }[]) => {
+  const newYearNum = parseInt(newYear);
+  const previousYear = newYearNum - 1;
+  
+  students.forEach(student => {
+    const history = loadHifzHistory(student.id);
+    const previousYearData = loadYearData(previousYear.toString(), student.id);
+    
+    // إذا كان هناك حفظ جديد في العام السابق، نضيفه للتاريخ
+    const previousParts = parseFloat(previousYearData.parts) || 0;
+    if (previousParts > 0) {
+      const historyKey = `h${previousYear}`;
+      history[historyKey] = previousParts.toString();
+      saveHifzHistory(student.id, history);
+    }
+  });
 };

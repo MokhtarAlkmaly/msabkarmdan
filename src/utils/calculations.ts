@@ -1,27 +1,18 @@
 import { HifzHistory } from "@/types/student";
 
-// الحساب الصحيح: يأخذ فقط الأعوام قبل العام الحالي
+// حساب الحفظ السابق: مجموع جميع الأعوام السابقة
 export const calculateBaseHifz = (history: HifzHistory, currentYear: number): number => {
-  const yearValues: Record<number, number> = {
-    1441: parseFloat(history.h1441) || 0,
-    1442: parseFloat(history.h1442) || 0,
-    1443: parseFloat(history.h1443) || 0,
-    1444: parseFloat(history.h1444) || 0,
-    1445: parseFloat(history.h1445) || 0,
-    1446: parseFloat(history.h1446) || 0,
-  };
-
-  let baseHifz = 0;
+  let total = 0;
   
-  // نأخذ فقط الأعوام التي تسبق العام الحالي
+  // نجمع كل الأعوام التي تسبق العام الحالي
   for (let year = 1441; year < currentYear; year++) {
-    const value = yearValues[year] || 0;
-    if (value > baseHifz) {
-      baseHifz = value;
-    }
+    const key = `h${year}`;
+    const value = parseFloat(history[key]) || 0;
+    total += value;
   }
 
-  return baseHifz;
+  // الحد الأقصى 30 جزء
+  return Math.min(total, 30);
 };
 
 export const calculateGrade = (totalScore: number): { grade: string; pricePerPart: number } => {
