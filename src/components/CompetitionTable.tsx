@@ -67,7 +67,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
           <tbody>
             {filteredStudents.map((student, index) => (
               <TableRow
-                key={student.id}
+                key={`${student.id}-${currentYear}`}
                 student={student}
                 index={index + 1}
                 currentYear={currentYear}
