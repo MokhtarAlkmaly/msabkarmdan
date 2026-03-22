@@ -218,6 +218,11 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
         {yearData.rank}
       </td>
 
+      {/* تقرير */}
+      <td className="border border-border p-1 text-center">
+        <StudentReport student={student} />
+      </td>
+
       {/* حذف */}
       <td className="border border-border p-1 text-center">
         <Button
