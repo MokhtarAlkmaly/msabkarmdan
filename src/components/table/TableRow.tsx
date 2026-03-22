@@ -207,6 +207,11 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
         {prize.toLocaleString()}
       </td>
 
+      {/* المكافأة حسب الحالة */}
+      <td className={`border border-border p-1 text-center font-semibold ${isActive ? 'text-islamic-green' : 'text-destructive'}`}>
+        {isActive ? prize.toLocaleString() : '0'}
+      </td>
+
       {/* الترتيب */}
       <td className="border border-border p-1 text-center font-bold">
         {yearData.rank}

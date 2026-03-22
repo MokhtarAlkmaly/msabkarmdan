@@ -22,6 +22,7 @@ export const TableHeader = ({ currentYear }: Props) => {
         <th rowSpan={2} className="border border-border p-2 min-w-[70px]">الحالة</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[80px]">التقدير</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[80px]">المكافأة</th>
+        <th rowSpan={2} className="border border-border p-2 min-w-[90px]">المكافأة حسب الحالة</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">ترتيب</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">حذف</th>
       </tr>
