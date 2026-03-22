@@ -2,6 +2,7 @@ import { Student } from "@/types/student";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { StudentReport } from "@/components/StudentReport";
 import { useState, useEffect } from "react";
 import {
   loadHifzHistory,
@@ -207,9 +208,19 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
         {prize.toLocaleString()}
       </td>
 
+      {/* المكافأة حسب الحالة */}
+      <td className={`border border-border p-1 text-center font-semibold ${isActive ? 'text-islamic-green' : 'text-destructive'}`}>
+        {isActive ? prize.toLocaleString() : '0'}
+      </td>
+
       {/* الترتيب */}
       <td className="border border-border p-1 text-center font-bold">
         {yearData.rank}
+      </td>
+
+      {/* تقرير */}
+      <td className="border border-border p-1 text-center">
+        <StudentReport student={student} />
       </td>
 
       {/* حذف */}
