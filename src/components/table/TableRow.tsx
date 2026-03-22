@@ -2,6 +2,7 @@ import { Student } from "@/types/student";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { StudentReport } from "@/components/StudentReport";
 import { useState, useEffect } from "react";
 import {
   loadHifzHistory,
