@@ -209,8 +209,15 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
       </td>
 
       {/* المكافأة حسب الحالة */}
-      <td className={`border border-border p-1 text-center font-semibold ${isActive ? 'text-islamic-green' : 'text-destructive'}`}>
-        {isActive ? prize.toLocaleString() : '0'}
+      <td className="border border-border p-1">
+        <Input
+          type="number"
+          value={yearData.statusPrize || ''}
+          onChange={(e) => updateYearField('statusPrize', e.target.value)}
+          placeholder="0"
+          min="0"
+          className="text-center border-0 focus-visible:ring-1 w-20 font-semibold"
+        />
       </td>
 
       {/* الترتيب */}

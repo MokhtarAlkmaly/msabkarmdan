@@ -13,6 +13,7 @@ export interface YearData {
   total: string;
   grade: string;
   prize: string;
+  statusPrize: string;
   rank: string;
 }
 

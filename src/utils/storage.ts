@@ -30,6 +30,7 @@ export const loadYearData = (year: string, studentId: number): YearData => {
     total: '0',
     grade: '',
     prize: '0',
+    statusPrize: '',
     rank: '-'
   };
 };
