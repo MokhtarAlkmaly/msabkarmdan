@@ -1,8 +1,8 @@
+import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Printer } from "lucide-react";
+import { Search, Filter, Printer, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Props {
   teachers: string[];
