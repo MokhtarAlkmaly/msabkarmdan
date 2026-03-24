@@ -230,65 +230,41 @@ export const ImportExport = ({ onDataImported }: Props) => {
     });
   };
 
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <Card className="p-4 space-y-4 bg-card/50 border-2 border-primary/20">
-      <div className="flex items-center gap-2 text-primary font-bold text-lg">
-        <FileSpreadsheet className="h-6 w-6" />
-        <span>استيراد وتصدير البيانات</span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">تنزيل قالب Excel فارغ</p>
-          <Button 
-            onClick={downloadTemplate} 
-            variant="outline"
-            className="w-full gap-2"
-          >
-            <Download className="h-4 w-4" />
-            تنزيل القالب
-          </Button>
+    <Card className="bg-card/50 border border-primary/20 print:hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors rounded-lg"
+      >
+        <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+          <FileSpreadsheet className="h-4 w-4" />
+          <span>استيراد وتصدير البيانات</span>
         </div>
+        {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
 
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">استيراد البيانات من Excel</p>
-          <Button 
-            variant="default"
-            className="w-full gap-2 relative overflow-hidden"
-          >
-            <Upload className="h-4 w-4" />
-            <span>استيراد Excel</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImport}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-          </Button>
+      {isOpen && (
+        <div className="px-3 pb-3 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            <Button onClick={downloadTemplate} variant="outline" size="sm" className="gap-1 text-xs">
+              <Download className="h-3 w-3" />
+              تنزيل القالب
+            </Button>
+            <Button variant="default" size="sm" className="gap-1 text-xs relative overflow-hidden">
+              <Upload className="h-3 w-3" />
+              <span>استيراد</span>
+              <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="absolute inset-0 opacity-0 cursor-pointer" />
+            </Button>
+            <Button onClick={handleExport} variant="secondary" size="sm" className="gap-1 text-xs">
+              <Download className="h-3 w-3" />
+              تصدير
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">📝 نزّل القالب، عبّئ البيانات (الاسم إلزامي)، ثم استورده.</p>
         </div>
-
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">تصدير جميع البيانات</p>
-          <Button 
-            onClick={handleExport}
-            variant="secondary"
-            className="w-full gap-2"
-          >
-            <Download className="h-4 w-4" />
-            تصدير إلى Excel
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-2">
-        <p className="font-semibold text-foreground">📝 تعليمات الاستيراد:</p>
-        <ul className="space-y-1 text-muted-foreground mr-4">
-          <li>• نزّل القالب وافتحه في Excel</li>
-          <li>• عبّئ البيانات (الاسم إلزامي)</li>
-          <li>• احفظ الملف واستورده هنا</li>
-          <li>• سيتم دمج البيانات مع البيانات الموجودة</li>
-        </ul>
-      </div>
+      )}
     </Card>
   );
 };

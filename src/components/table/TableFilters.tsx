@@ -35,74 +35,66 @@ export const TableFilters = ({
   onPrintFiltered,
   hasFilters,
 }: Props) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div className="bg-card rounded-lg border border-border p-4 space-y-4 print:hidden">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-primary font-semibold">
-          <Filter className="h-5 w-5" />
+    <div className="bg-card rounded-lg border border-border print:hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors rounded-lg"
+      >
+        <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+          <Filter className="h-4 w-4" />
           <span>تصفية البيانات</span>
+          {hasFilters && <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">مفعّل</span>}
         </div>
-        {hasFilters && (
-          <Button onClick={onPrintFiltered} variant="secondary" size="sm" className="gap-2">
-            <Printer className="h-4 w-4" />
-            طباعة النتائج المصفاة
-          </Button>
-        )}
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">المعلمة</Label>
+        <div className="flex items-center gap-2">
+          {hasFilters && (
+            <Button onClick={(e) => { e.stopPropagation(); onPrintFiltered(); }} variant="secondary" size="sm" className="gap-1 text-xs h-7">
+              <Printer className="h-3 w-3" />
+              طباعة
+            </Button>
+          )}
+          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-3 pb-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
           <Select value={selectedTeacher} onValueChange={onTeacherChange}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="اختر المعلمة" />
+            <SelectTrigger className="bg-background h-8 text-xs">
+              <SelectValue placeholder="المعلمة" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">عرض الجميع</SelectItem>
+              <SelectItem value="all">كل المعلمات</SelectItem>
               {teachers.map(teacher => (
-                <SelectItem key={teacher} value={teacher}>
-                  {teacher}
-                </SelectItem>
+                <SelectItem key={teacher} value={teacher}>{teacher}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">اسم الطالبة</Label>
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={nameFilter}
-              onChange={(e) => onNameFilterChange(e.target.value)}
-              placeholder="ابحث بالاسم..."
-              className="pr-10"
-            />
+            <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Input value={nameFilter} onChange={(e) => onNameFilterChange(e.target.value)} placeholder="بحث بالاسم..." className="pr-7 h-8 text-xs" />
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">الحالة</Label>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="اختر الحالة" />
+            <SelectTrigger className="bg-background h-8 text-xs">
+              <SelectValue placeholder="الحالة" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="all">كل الحالات</SelectItem>
               <SelectItem value="active">نشط</SelectItem>
               <SelectItem value="inactive">منقطع</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">التقدير</Label>
           <Select value={gradeFilter} onValueChange={onGradeFilterChange}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="اختر التقدير" />
+            <SelectTrigger className="bg-background h-8 text-xs">
+              <SelectValue placeholder="التقدير" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="all">كل التقديرات</SelectItem>
               <SelectItem value="ممتاز">ممتاز</SelectItem>
               <SelectItem value="جيد جداً">جيد جداً</SelectItem>
               <SelectItem value="جيد">جيد</SelectItem>
@@ -110,20 +102,10 @@ export const TableFilters = ({
               <SelectItem value="ضعيف">ضعيف</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">الحفظ الجديد (أجزاء)</Label>
-          <Input
-            type="number"
-            value={partsFilter}
-            onChange={(e) => onPartsFilterChange(e.target.value)}
-            placeholder="الحد الأدنى..."
-            min="0"
-            className="bg-background"
-          />
+          <Input type="number" value={partsFilter} onChange={(e) => onPartsFilterChange(e.target.value)} placeholder="الحد الأدنى للحفظ" min="0" className="bg-background h-8 text-xs" />
         </div>
-      </div>
+      )}
     </div>
   );
 };
