@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 import {
   loadGlobalStudents,
-  saveGlobalStudents,
+  saveStudent,
   loadHifzHistory,
   saveHifzHistory,
   loadYearData,
@@ -20,24 +20,19 @@ interface Props {
 
 export const ImportExport = ({ onDataImported }: Props) => {
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
 
-  const handleExport = () => {
-    const students = loadGlobalStudents();
+  const handleExport = async () => {
+    const students = await loadGlobalStudents();
     
     if (students.length === 0) {
-      toast({
-        title: "لا توجد بيانات",
-        description: "لا توجد بيانات لتصديرها",
-        variant: "destructive",
-      });
+      toast({ title: "لا توجد بيانات", description: "لا توجد بيانات لتصديرها", variant: "destructive" });
       return;
     }
 
-    // تجهيز البيانات للتصدير
-    const exportData = students.map(student => {
-      const history = loadHifzHistory(student.id);
-      
-      // جمع بيانات جميع الأعوام
+    const exportData = [];
+    for (const student of students) {
+      const history = await loadHifzHistory(student.id);
       const allYearsData: Record<string, any> = {
         'الاسم': student.name,
         'حفظ_1441': history.h1441 || '',
@@ -48,9 +43,8 @@ export const ImportExport = ({ onDataImported }: Props) => {
         'حفظ_1446': history.h1446 || '',
       };
 
-      // إضافة بيانات كل عام إن وجدت
       for (let year = 1442; year <= 1450; year++) {
-        const yearData = loadYearData(year.toString(), student.id);
+        const yearData = await loadYearData(year.toString(), student.id);
         if (yearData.parts || yearData.total !== '0') {
           allYearsData[`حفظ_جديد_${year}`] = yearData.parts || '';
           allYearsData[`سنة_${year}`] = yearData.annual || '';
@@ -61,176 +55,103 @@ export const ImportExport = ({ onDataImported }: Props) => {
           allYearsData[`مكافأة_${year}`] = yearData.prize || '';
         }
       }
+      exportData.push(allYearsData);
+    }
 
-      return allYearsData;
-    });
-
-    // إنشاء ملف Excel
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "بيانات المسابقة");
-
-    // تحسين عرض الأعمدة
-    const maxWidth = 20;
-    const cols = Object.keys(exportData[0] || {}).map(() => ({ wch: maxWidth }));
+    const cols = Object.keys(exportData[0] || {}).map(() => ({ wch: 20 }));
     worksheet['!cols'] = cols;
-
-    // تنزيل الملف
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(workbook, `بيانات_المسابقة_${date}.xlsx`);
-
-    toast({
-      title: "تم التصدير بنجاح",
-      description: `تم تصدير بيانات ${students.length} طالبة`,
-    });
+    toast({ title: "تم التصدير بنجاح", description: `تم تصدير بيانات ${students.length} طالبة` });
   };
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
-        
-        // قراءة أول ورقة
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         if (jsonData.length === 0) {
-          toast({
-            title: "خطأ",
-            description: "الملف فارغ أو لا يحتوي على بيانات صحيحة",
-            variant: "destructive",
-          });
+          toast({ title: "خطأ", description: "الملف فارغ أو لا يحتوي على بيانات صحيحة", variant: "destructive" });
           return;
         }
 
         let importedCount = 0;
         let updatedCount = 0;
-        const existingStudents = loadGlobalStudents();
-        let maxId = existingStudents.length > 0 
-          ? Math.max(...existingStudents.map(s => s.id)) 
-          : 0;
+        const existingStudents = await loadGlobalStudents();
 
-        jsonData.forEach((row: any) => {
+        for (const row of jsonData as any[]) {
           const name = row['الاسم']?.toString().trim();
+          if (!name) continue;
 
-          if (!name) return;
-
-          // البحث عن الطالبة بالاسم
           let student = existingStudents.find(s => s.name === name);
+          let studentId: number;
 
           if (!student) {
-            // إضافة طالبة جديدة
-            maxId++;
-            student = { id: maxId, name, teacher: '' };
-            existingStudents.push(student);
+            const newId = await saveStudent({ name, teacher: '' });
+            if (!newId) continue;
+            studentId = newId;
             importedCount++;
           } else {
+            studentId = student.id;
             updatedCount++;
           }
 
-          // استيراد بيانات الحفظ التاريخي
-          const history = loadHifzHistory(student.id);
-          
+          const history = await loadHifzHistory(studentId);
           if (row['حفظ_1441']) history.h1441 = row['حفظ_1441'].toString();
           if (row['حفظ_1442']) history.h1442 = row['حفظ_1442'].toString();
           if (row['حفظ_1443']) history.h1443 = row['حفظ_1443'].toString();
           if (row['حفظ_1444']) history.h1444 = row['حفظ_1444'].toString();
           if (row['حفظ_1445']) history.h1445 = row['حفظ_1445'].toString();
           if (row['حفظ_1446']) history.h1446 = row['حفظ_1446'].toString();
-          
-          saveHifzHistory(student.id, history);
+          await saveHifzHistory(studentId, history);
 
-          // استيراد بيانات الأعوام
           for (let year = 1442; year <= 1450; year++) {
-            const yearStr = year.toString();
-            const yearData = loadYearData(yearStr, student.id);
+            const yearData = await loadYearData(year.toString(), studentId);
             let hasData = false;
-
-            if (row[`حفظ_جديد_${year}`] !== undefined) {
-              yearData.parts = row[`حفظ_جديد_${year}`].toString();
-              hasData = true;
-            }
-            if (row[`سنة_${year}`] !== undefined) {
-              yearData.annual = row[`سنة_${year}`].toString();
-              hasData = true;
-            }
-            if (row[`تلاوة_${year}`] !== undefined) {
-              yearData.recitation = row[`تلاوة_${year}`].toString();
-              hasData = true;
-            }
-            if (row[`حفظ_درجة_${year}`] !== undefined) {
-              yearData.memorization = row[`حفظ_درجة_${year}`].toString();
-              hasData = true;
-            }
-
-            if (hasData) {
-              saveYearData(yearStr, student.id, yearData);
-            }
+            if (row[`حفظ_جديد_${year}`] !== undefined) { yearData.parts = row[`حفظ_جديد_${year}`].toString(); hasData = true; }
+            if (row[`سنة_${year}`] !== undefined) { yearData.annual = row[`سنة_${year}`].toString(); hasData = true; }
+            if (row[`تلاوة_${year}`] !== undefined) { yearData.recitation = row[`تلاوة_${year}`].toString(); hasData = true; }
+            if (row[`حفظ_درجة_${year}`] !== undefined) { yearData.memorization = row[`حفظ_درجة_${year}`].toString(); hasData = true; }
+            if (hasData) await saveYearData(year.toString(), studentId, yearData);
           }
-        });
+        }
 
-        saveGlobalStudents(existingStudents);
         onDataImported();
-
-        toast({
-          title: "تم الاستيراد بنجاح",
-          description: `تم استيراد ${importedCount} طالبة جديدة وتحديث ${updatedCount} طالبة`,
-        });
-
+        toast({ title: "تم الاستيراد بنجاح", description: `تم استيراد ${importedCount} طالبة جديدة وتحديث ${updatedCount} طالبة` });
       } catch (error) {
         console.error('Error importing file:', error);
-        toast({
-          title: "خطأ في الاستيراد",
-          description: "تأكد من صحة تنسيق ملف Excel",
-          variant: "destructive",
-        });
+        toast({ title: "خطأ في الاستيراد", description: "تأكد من صحة تنسيق ملف Excel", variant: "destructive" });
       }
     };
-
     reader.readAsBinaryString(file);
-    event.target.value = ''; // إعادة تعيين input
+    event.target.value = '';
   };
 
   const downloadTemplate = () => {
-    const templateData = [
-      {
-        'الاسم': 'مثال: فاطمة أحمد',
-        'حفظ_1441': '3',
-        'حفظ_1442': '5',
-        'حفظ_1443': '10',
-        'حفظ_1444': '15',
-        'حفظ_1445': '20',
-        'حفظ_1446': '25',
-        'حفظ_جديد_1447': '5',
-        'سنة_1447': '18',
-        'تلاوة_1447': '19',
-        'حفظ_درجة_1447': '55',
-      }
-    ];
-
+    const templateData = [{
+      'الاسم': 'مثال: فاطمة أحمد',
+      'حفظ_1441': '3', 'حفظ_1442': '5', 'حفظ_1443': '10',
+      'حفظ_1444': '15', 'حفظ_1445': '20', 'حفظ_1446': '25',
+      'حفظ_جديد_1447': '5', 'سنة_1447': '18', 'تلاوة_1447': '19', 'حفظ_درجة_1447': '55',
+    }];
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "قالب البيانات");
-
-    // تحسين عرض الأعمدة
     worksheet['!cols'] = Array(11).fill({ wch: 20 });
-
     XLSX.writeFile(workbook, 'قالب_استيراد_البيانات.xlsx');
-
-    toast({
-      title: "تم تنزيل القالب",
-      description: "يمكنك تعبئة البيانات في القالب ثم استيراده",
-    });
+    toast({ title: "تم تنزيل القالب", description: "يمكنك تعبئة البيانات في القالب ثم استيراده" });
   };
-
-  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Card className="bg-card/50 border border-primary/20 print:hidden">
