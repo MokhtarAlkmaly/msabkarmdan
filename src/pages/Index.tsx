@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Plus, Printer, Trash2, Calendar } from "lucide-react";
+import { Plus, Printer, Trash2, Calendar, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadGlobalStudents,
-  saveGlobalStudents,
+  saveStudent,
+  deleteAllStudents,
   getActiveYear,
   setActiveYear,
   loadHifzHistory,
@@ -18,77 +19,73 @@ import {
   migrateYearData,
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const [students, setStudents] = useState<Student[]>([]);
-  const [currentYear, setCurrentYear] = useState<string>(getActiveYear());
-  const [studentIdCounter, setStudentIdCounter] = useState(1);
+  const [currentYear, setCurrentYear] = useState<string>("1447");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
 
-  const loadData = () => {
-    const globalStudents = loadGlobalStudents();
-    const studentsWithData = globalStudents.map(student => ({
-      ...student,
-      hifzHistory: loadHifzHistory(student.id),
-      yearData: loadYearData(currentYear, student.id),
-    }));
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const globalStudents = await loadGlobalStudents();
+    
+    const studentsWithData = await Promise.all(
+      globalStudents.map(async (student) => ({
+        ...student,
+        hifzHistory: await loadHifzHistory(student.id),
+        yearData: await loadYearData(currentYear, student.id),
+      }))
+    );
 
     setStudents(studentsWithData);
-    
-    if (globalStudents.length > 0) {
-      const maxId = Math.max(...globalStudents.map(s => s.id));
-      setStudentIdCounter(maxId + 1);
-    }
-  };
+    setLoading(false);
+  }, [currentYear]);
+
+  useEffect(() => {
+    const init = async () => {
+      const year = await getActiveYear();
+      setCurrentYear(year);
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, [currentYear]);
+  }, [loadData]);
 
-  const handleYearChange = (year: string) => {
-    // ترحيل بيانات العام السابق للتاريخ
-    const globalStudents = loadGlobalStudents();
-    migrateYearData(year, globalStudents);
+  const handleYearChange = async (year: string) => {
+    const globalStudents = await loadGlobalStudents();
+    await migrateYearData(year, globalStudents);
     
     setCurrentYear(year);
-    setActiveYear(year);
+    await setActiveYear(year);
     toast({
       title: "تم تغيير السنة",
       description: `تم التبديل إلى عام ${year}هـ`,
     });
   };
 
-  const addNewStudent = () => {
-    const newStudent = {
-      id: studentIdCounter,
-      name: '',
-      teacher: '',
-    };
-    
-    const allStudents = [...loadGlobalStudents(), newStudent];
-    saveGlobalStudents(allStudents);
-    setStudentIdCounter(studentIdCounter + 1);
-    loadData();
-    
-    toast({
-      title: "تمت الإضافة",
-      description: "تم إضافة طالبة جديدة",
-    });
+  const addNewStudent = async () => {
+    const newId = await saveStudent({ name: '', teacher: '' });
+    if (newId) {
+      await loadData();
+      toast({
+        title: "تمت الإضافة",
+        description: "تم إضافة طالبة جديدة",
+      });
+    }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذه الطالبة؟')) return;
 
-    const allStudents = loadGlobalStudents().filter(s => s.id !== id);
-    saveGlobalStudents(allStudents);
+    const { deleteStudent } = await import("@/utils/storage");
+    await deleteStudent(id);
     
-    // حذف بيانات جميع الأعوام
-    for (let year = START_YEAR; year <= END_YEAR; year++) {
-      localStorage.removeItem(`quran_db_${year}_${id}`);
-    }
-    localStorage.removeItem(`hifz_history_${id}`);
-    
-    loadData();
+    await loadData();
     toast({
       title: "تم الحذف",
       description: "تم حذف الطالبة بنجاح",
@@ -96,12 +93,11 @@ const Index = () => {
     });
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!confirm('هل أنت متأكد من حذف جميع البيانات؟ هذا الإجراء لا يمكن التراجع عنه!')) return;
 
-    localStorage.clear();
+    await deleteAllStudents();
     setStudents([]);
-    setStudentIdCounter(1);
     
     toast({
       title: "تم الحذف",
@@ -116,19 +112,21 @@ const Index = () => {
 
   // حساب الترتيب
   useEffect(() => {
-    const sortedStudents = [...students]
-      .filter(s => parseFloat(s.yearData?.total || '0') > 0)
-      .sort((a, b) => parseFloat(b.yearData?.total || '0') - parseFloat(a.yearData?.total || '0'));
+    const updateRanks = async () => {
+      const { saveYearData } = await import("@/utils/storage");
+      const sortedStudents = [...students]
+        .filter(s => parseFloat(s.yearData?.total || '0') > 0)
+        .sort((a, b) => parseFloat(b.yearData?.total || '0') - parseFloat(a.yearData?.total || '0'));
 
-    sortedStudents.forEach((student, index) => {
-      if (student.yearData) {
-        student.yearData.rank = (index + 1).toString();
-        localStorage.setItem(
-          `quran_db_${currentYear}_${student.id}`,
-          JSON.stringify(student.yearData)
-        );
+      for (let i = 0; i < sortedStudents.length; i++) {
+        const student = sortedStudents[i];
+        if (student.yearData) {
+          student.yearData.rank = (i + 1).toString();
+          await saveYearData(currentYear, student.id, student.yearData);
+        }
       }
-    });
+    };
+    if (students.length > 0) updateRanks();
   }, [students, currentYear]);
 
   const currentDate = new Date().toLocaleDateString('ar-EG', {
@@ -139,10 +137,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Install Prompt */}
       <InstallPrompt />
       
-      {/* Header */}
       <header className="bg-primary text-primary-foreground py-6 px-4 print:py-4">
         <div className="container mx-auto">
           <div className="flex flex-col items-center mb-4">
@@ -165,17 +161,22 @@ const Index = () => {
             <div className="text-sm text-left text-primary-foreground/90">
               <div>التاريخ:</div>
               <div className="font-semibold">{currentDate}</div>
+              <Button
+                onClick={signOut}
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
+              >
+                <LogOut className="h-3 w-3" />
+                خروج
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Controls */}
       <div className="container mx-auto px-4 py-6 print:hidden space-y-4">
-        {/* Notifications System */}
         <NotificationSystem students={students} currentYear={currentYear} />
-
-        {/* Import/Export Section */}
         <ImportExport onDataImported={loadData} />
 
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
@@ -219,17 +220,19 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="container mx-auto px-4 pb-8">
-        <CompetitionTable
-          students={students}
-          currentYear={currentYear}
-          onUpdate={loadData}
-          onDelete={handleDelete}
-        />
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">جارٍ تحميل البيانات...</div>
+        ) : (
+          <CompetitionTable
+            students={students}
+            currentYear={currentYear}
+            onUpdate={loadData}
+            onDelete={handleDelete}
+          />
+        )}
       </div>
 
-      {/* Footer */}
       <footer className="text-center text-sm text-muted-foreground py-4 print:py-2">
         تصميم أ/ مختار الكمالي
       </footer>
