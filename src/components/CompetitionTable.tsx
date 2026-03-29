@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Student } from "@/types/student";
 import { TableHeader } from "./table/TableHeader";
+import { SortField, SortDirection } from "./table/TableHeader";
 import { TableRow } from "./table/TableRow";
 import { TableFilters } from "./table/TableFilters";
-import { calculateGrade } from "@/utils/calculations";
+import { calculateGrade, calculateBaseHifz } from "@/utils/calculations";
 import logo from "@/assets/logo.png";
 
 interface Props {
@@ -19,14 +20,58 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [partsFilter, setPartsFilter] = useState<string>("");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') setSortDirection('desc');
+      else if (sortDirection === 'desc') { setSortField(null); setSortDirection(null); }
+      else setSortDirection('asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }, [sortField, sortDirection]);
 
   const teachers = useMemo(() => {
     const uniqueTeachers = Array.from(new Set(students.map(s => s.teacher).filter(Boolean)));
     return uniqueTeachers.sort((a, b) => a.localeCompare(b, 'ar'));
   }, [students]);
 
+  const currentYearNum = parseInt(currentYear);
+
+  const getStudentSortValue = useCallback((student: Student, field: SortField): string | number => {
+    const parts = parseFloat(student.yearData?.parts || '0');
+    const totalScore = parseFloat(student.yearData?.total || '0');
+    const isActive = parts > 0 || totalScore > 0;
+    const baseHifz = calculateBaseHifz(student.hifzHistory || {}, currentYearNum);
+
+    switch (field) {
+      case 'name': return student.name || '';
+      case 'teacher': return student.teacher || '';
+      case 'baseHifz': return baseHifz;
+      case 'parts': return parts;
+      case 'totalHifz': return Math.min(baseHifz + parts, 30);
+      case 'annual': return parseFloat(student.yearData?.annual || '0');
+      case 'recitation': return parseFloat(student.yearData?.recitation || '0');
+      case 'memorization': return parseFloat(student.yearData?.memorization || '0');
+      case 'total': return totalScore;
+      case 'status': return isActive ? 1 : 0;
+      case 'grade': {
+        const { grade } = calculateGrade(totalScore);
+        const order: Record<string, number> = { 'ممتاز': 5, 'جيد جداً': 4, 'جيد': 3, 'مقبول': 2, 'ضعيف': 1, '': 0 };
+        return order[grade] || 0;
+      }
+      case 'prize': return parseFloat(student.yearData?.prize || '0');
+      case 'statusPrize': return parseFloat(student.yearData?.statusPrize || '0');
+      case 'rank': return parseFloat(student.yearData?.rank || '0') || 9999;
+      default: return 0;
+    }
+  }, [currentYearNum]);
+
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
+    const filtered = students.filter(student => {
       if (selectedTeacher !== "all" && student.teacher !== selectedTeacher) return false;
       if (nameFilter && !student.name.includes(nameFilter)) return false;
 
@@ -39,14 +84,12 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
         if (statusFilter === "inactive" && isActive) return false;
       }
 
-      // فلترة حسب التقدير
       if (gradeFilter !== "all") {
         const totalScore = parseFloat(student.yearData?.total || '0');
         const { grade } = calculateGrade(totalScore);
         if (grade !== gradeFilter) return false;
       }
 
-      // فلترة حسب الحفظ الجديد
       if (partsFilter) {
         const minParts = parseFloat(partsFilter) || 0;
         if (parts < minParts) return false;
@@ -54,7 +97,18 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
 
       return true;
     });
-  }, [students, selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter]);
+
+    if (sortField && sortDirection) {
+      filtered.sort((a, b) => {
+        const aVal = getStudentSortValue(a, sortField);
+        const bVal = getStudentSortValue(b, sortField);
+        const cmp = typeof aVal === 'string' ? aVal.localeCompare(bVal as string, 'ar') : (aVal as number) - (bVal as number);
+        return sortDirection === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    return filtered;
+  }, [students, selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection, getStudentSortValue]);
 
   const hasFilters = selectedTeacher !== "all" || nameFilter !== "" || statusFilter !== "all" || gradeFilter !== "all" || partsFilter !== "";
 
@@ -179,7 +233,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
 
       <div className="overflow-x-auto rounded-lg border border-border shadow-lg">
         <table className="w-full border-collapse bg-card text-sm">
-          <TableHeader currentYear={currentYear} />
+          <TableHeader currentYear={currentYear} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
           <tbody>
             {filteredStudents.map((student, index) => (
               <TableRow

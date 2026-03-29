@@ -1,37 +1,67 @@
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+
+export type SortField = 'index' | 'name' | 'teacher' | 'baseHifz' | 'parts' | 'totalHifz' | 'annual' | 'recitation' | 'memorization' | 'total' | 'status' | 'grade' | 'prize' | 'statusPrize' | 'rank';
+export type SortDirection = 'asc' | 'desc' | null;
+
 interface Props {
   currentYear: string;
+  sortField: SortField | null;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
 }
 
-export const TableHeader = ({ currentYear }: Props) => {
+const SortIcon = ({ field, sortField, sortDirection }: { field: SortField; sortField: SortField | null; sortDirection: SortDirection }) => {
+  if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40 inline-block mr-1" />;
+  if (sortDirection === 'asc') return <ArrowUp className="h-3 w-3 inline-block mr-1 text-primary-foreground" />;
+  return <ArrowDown className="h-3 w-3 inline-block mr-1 text-primary-foreground" />;
+};
+
+export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: Props) => {
+  const sortableHeader = (label: string, field: SortField, extra?: string) => (
+    <th
+      className={`border border-border p-2 min-w-[50px] cursor-pointer hover:bg-primary/80 select-none transition-colors ${extra || ''}`}
+      onClick={() => onSort(field)}
+    >
+      <span className="flex items-center justify-center gap-0.5">
+        {label}
+        <SortIcon field={field} sortField={sortField} sortDirection={sortDirection} />
+      </span>
+    </th>
+  );
+
   return (
     <thead className="bg-primary text-primary-foreground sticky top-0 z-10">
       <tr>
-        <th rowSpan={2} className="border border-border p-2 min-w-[50px]">م</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[150px]">اسم الطالبة</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[120px]">المعلمة</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[80px] bg-accent/20">
-          الحفظ السابق
+        {sortableHeader('م', 'index')}
+        {sortableHeader('اسم الطالبة', 'name', 'min-w-[150px]')}
+        {sortableHeader('المعلمة', 'teacher', 'min-w-[120px]')}
+        <th className="border border-border p-2 min-w-[80px] bg-accent/20 cursor-pointer hover:bg-accent/40 select-none transition-colors" onClick={() => onSort('baseHifz')}>
+          <span className="flex items-center justify-center gap-0.5">الحفظ السابق<SortIcon field="baseHifz" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[80px]">
-          حفظ جديد ({currentYear})
-        </th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[100px]">
-          الإجمالي التراكمي
-        </th>
+        {sortableHeader(`حفظ جديد (${currentYear})`, 'parts', 'min-w-[80px]')}
+        {sortableHeader('الإجمالي التراكمي', 'totalHifz', 'min-w-[100px]')}
         <th colSpan={4} className="border border-border p-2 bg-success/20">الدرجات</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[70px]">الحالة</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[80px]">التقدير</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[80px]">المكافأة</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[90px]">المكافأة حسب الحالة</th>
-        <th rowSpan={2} className="border border-border p-2 min-w-[60px]">ترتيب</th>
+        {sortableHeader('الحالة', 'status', 'min-w-[70px]')}
+        {sortableHeader('التقدير', 'grade', 'min-w-[80px]')}
+        {sortableHeader('المكافأة', 'prize', 'min-w-[80px]')}
+        {sortableHeader('المكافأة حسب الحالة', 'statusPrize', 'min-w-[90px]')}
+        {sortableHeader('ترتيب', 'rank', 'min-w-[60px]')}
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">تقرير</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">حذف</th>
       </tr>
       <tr>
-        <th className="border border-border p-2 min-w-[70px] bg-success/20">سنة (20)</th>
-        <th className="border border-border p-2 min-w-[70px] bg-success/20">تلاوة (20)</th>
-        <th className="border border-border p-2 min-w-[70px] bg-success/20">حفظ (60)</th>
-        <th className="border border-border p-2 min-w-[70px] bg-success/20">مجموع</th>
+        <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('annual')}>
+          <span className="flex items-center justify-center gap-0.5">سنة (20)<SortIcon field="annual" sortField={sortField} sortDirection={sortDirection} /></span>
+        </th>
+        <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('recitation')}>
+          <span className="flex items-center justify-center gap-0.5">تلاوة (20)<SortIcon field="recitation" sortField={sortField} sortDirection={sortDirection} /></span>
+        </th>
+        <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('memorization')}>
+          <span className="flex items-center justify-center gap-0.5">حفظ (60)<SortIcon field="memorization" sortField={sortField} sortDirection={sortDirection} /></span>
+        </th>
+        <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('total')}>
+          <span className="flex items-center justify-center gap-0.5">مجموع<SortIcon field="total" sortField={sortField} sortDirection={sortDirection} /></span>
+        </th>
       </tr>
     </thead>
   );
