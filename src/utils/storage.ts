@@ -130,16 +130,14 @@ export const loadHifzHistory = async (studentId: number): Promise<HifzHistory> =
 };
 
 export const saveHifzHistory = async (studentId: number, history: HifzHistory) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const userId = await getUserId();
+  if (!userId) return;
 
-  for (const [yearKey, value] of Object.entries(history)) {
-    await supabase
-      .from('hifz_history')
-      .upsert(
-        { student_id: studentId, user_id: user.id, year_key: yearKey, value: value || '0' },
-        { onConflict: 'student_id,year_key' }
-      );
+  const rows = Object.entries(history).map(([yearKey, value]) => ({
+    student_id: studentId, user_id: userId, year_key: yearKey, value: value || '0'
+  }));
+  if (rows.length > 0) {
+    await supabase.from('hifz_history').upsert(rows, { onConflict: 'student_id,year_key' });
   }
 };
 
