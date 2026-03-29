@@ -79,8 +79,8 @@ export const loadAllStudentsWithData = async (currentYear: string): Promise<Stud
 };
 
 export const saveStudent = async (student: { id?: number; name: string; teacher: string }): Promise<number | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
 
   if (student.id) {
     await supabase
