@@ -101,17 +101,15 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
 };
 
 export const deleteStudent = async (id: number) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  await supabase.from('students').delete().eq('id', id).eq('user_id', user.id);
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('students').delete().eq('id', id).eq('user_id', userId);
 };
 
 export const deleteAllStudents = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  await supabase.from('students').delete().eq('user_id', user.id);
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('students').delete().eq('user_id', userId);
 };
 
 export const loadHifzHistory = async (studentId: number): Promise<HifzHistory> => {
