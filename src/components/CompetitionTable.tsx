@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Student } from "@/types/student";
 import { TableHeader } from "./table/TableHeader";
+import { SortField, SortDirection } from "./table/TableHeader";
 import { TableRow } from "./table/TableRow";
 import { TableFilters } from "./table/TableFilters";
-import { calculateGrade } from "@/utils/calculations";
+import { calculateGrade, calculateBaseHifz } from "@/utils/calculations";
 import logo from "@/assets/logo.png";
 
 interface Props {
