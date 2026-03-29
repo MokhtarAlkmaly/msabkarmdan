@@ -200,25 +200,25 @@ export const saveYearData = async (year: string, studentId: number, data: YearDa
 };
 
 export const getActiveYear = async (): Promise<string> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return '1447';
+  const userId = await getUserId();
+  if (!userId) return '1447';
 
   const { data } = await supabase
     .from('user_settings')
     .select('active_year')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle();
 
   return data?.active_year || '1447';
 };
 
 export const setActiveYear = async (year: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const userId = await getUserId();
+  if (!userId) return;
 
   await supabase
     .from('user_settings')
-    .upsert({ user_id: user.id, active_year: year }, { onConflict: 'user_id' });
+    .upsert({ user_id: userId, active_year: year }, { onConflict: 'user_id' });
 };
 
 export const migrateYearData = async (newYear: string, students: { id: number }[]) => {
