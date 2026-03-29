@@ -20,6 +20,19 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [partsFilter, setPartsFilter] = useState<string>("");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') setSortDirection('desc');
+      else if (sortDirection === 'desc') { setSortField(null); setSortDirection(null); }
+      else setSortDirection('asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }, [sortField, sortDirection]);
 
   const teachers = useMemo(() => {
     const uniqueTeachers = Array.from(new Set(students.map(s => s.teacher).filter(Boolean)));
