@@ -176,14 +176,14 @@ export const loadYearData = async (year: string, studentId: number): Promise<Yea
 };
 
 export const saveYearData = async (year: string, studentId: number, data: YearData) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const userId = await getUserId();
+  if (!userId) return;
 
   await supabase
     .from('year_data')
     .upsert({
       student_id: studentId,
-      user_id: user.id,
+      user_id: userId,
       year,
       base_hifz: data.baseHifz,
       total_hifz: data.totalHifz,
