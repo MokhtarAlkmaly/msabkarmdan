@@ -117,8 +117,8 @@ export const ImportExport = ({ onDataImported }: Props) => {
           await saveHifzHistory(studentId, history);
 
           for (let year = 1442; year <= 1450; year++) {
-            const yearData = await loadYearData(year.toString(), studentId);
             let hasData = false;
+            const yearData = await loadYearData(year.toString(), studentId);
             if (row[`حفظ_جديد_${year}`] !== undefined) { yearData.parts = row[`حفظ_جديد_${year}`].toString(); hasData = true; }
             if (row[`سنة_${year}`] !== undefined) { yearData.annual = row[`سنة_${year}`].toString(); hasData = true; }
             if (row[`تلاوة_${year}`] !== undefined) { yearData.recitation = row[`تلاوة_${year}`].toString(); hasData = true; }
