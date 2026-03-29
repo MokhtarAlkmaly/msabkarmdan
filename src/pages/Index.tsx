@@ -9,6 +9,7 @@ import { Plus, Printer, Trash2, Calendar, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
+  loadAllStudentsWithData,
   loadGlobalStudents,
   saveStudent,
   deleteAllStudents,
