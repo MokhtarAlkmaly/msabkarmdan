@@ -87,12 +87,12 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
       .from('students')
       .update({ name: student.name, teacher: student.teacher })
       .eq('id', student.id)
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     return student.id;
   } else {
     const { data, error } = await supabase
       .from('students')
-      .insert({ name: student.name, teacher: student.teacher, user_id: user.id })
+      .insert({ name: student.name, teacher: student.teacher, user_id: userId })
       .select('id')
       .single();
     if (error) { console.error(error); return null; }
