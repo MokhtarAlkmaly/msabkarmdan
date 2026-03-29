@@ -1,16 +1,29 @@
 import { Student, HifzHistory, YearData } from "@/types/student";
 import { supabase } from "@/integrations/supabase/client";
 
+// ===== Helper: get cached user =====
+let cachedUserId: string | null = null;
+
+const getUserId = async (): Promise<string | null> => {
+  if (cachedUserId) return cachedUserId;
+  const { data: { user } } = await supabase.auth.getUser();
+  cachedUserId = user?.id || null;
+  return cachedUserId;
+};
+
+// Clear cache on auth state change
+supabase.auth.onAuthStateChange(() => { cachedUserId = null; });
+
 // ===== Supabase-based storage functions =====
 
 export const loadGlobalStudents = async (): Promise<Student[]> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getUserId();
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from('students')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('id');
 
   if (error) {
@@ -21,21 +34,65 @@ export const loadGlobalStudents = async (): Promise<Student[]> => {
   return data.map(s => ({ id: s.id, name: s.name, teacher: s.teacher }));
 };
 
+// ===== Batch loading: single query for all students =====
+
+export const loadAllStudentsWithData = async (currentYear: string): Promise<Student[]> => {
+  const userId = await getUserId();
+  if (!userId) return [];
+
+  const [studentsRes, historyRes, yearDataRes] = await Promise.all([
+    supabase.from('students').select('*').eq('user_id', userId).order('id'),
+    supabase.from('hifz_history').select('*').eq('user_id', userId),
+    supabase.from('year_data').select('*').eq('user_id', userId).eq('year', currentYear),
+  ]);
+
+  if (studentsRes.error) { console.error(studentsRes.error); return []; }
+
+  const historyMap: Record<number, HifzHistory> = {};
+  (historyRes.data || []).forEach(row => {
+    if (!historyMap[row.student_id]) historyMap[row.student_id] = {};
+    historyMap[row.student_id][row.year_key] = row.value;
+  });
+
+  const yearDataMap: Record<number, YearData> = {};
+  (yearDataRes.data || []).forEach(row => {
+    yearDataMap[row.student_id] = {
+      baseHifz: row.base_hifz, totalHifz: row.total_hifz, parts: row.parts,
+      annual: row.annual, recitation: row.recitation, memorization: row.memorization,
+      total: row.total, grade: row.grade, prize: row.prize,
+      statusPrize: row.status_prize, rank: row.rank,
+    };
+  });
+
+  const defaultYearData: YearData = {
+    baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
+    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+  };
+
+  return studentsRes.data.map(s => ({
+    id: s.id,
+    name: s.name,
+    teacher: s.teacher,
+    hifzHistory: historyMap[s.id] || {},
+    yearData: yearDataMap[s.id] || { ...defaultYearData },
+  }));
+};
+
 export const saveStudent = async (student: { id?: number; name: string; teacher: string }): Promise<number | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
 
   if (student.id) {
     await supabase
       .from('students')
       .update({ name: student.name, teacher: student.teacher })
       .eq('id', student.id)
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     return student.id;
   } else {
     const { data, error } = await supabase
       .from('students')
-      .insert({ name: student.name, teacher: student.teacher, user_id: user.id })
+      .insert({ name: student.name, teacher: student.teacher, user_id: userId })
       .select('id')
       .single();
     if (error) { console.error(error); return null; }
@@ -44,28 +101,26 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
 };
 
 export const deleteStudent = async (id: number) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  await supabase.from('students').delete().eq('id', id).eq('user_id', user.id);
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('students').delete().eq('id', id).eq('user_id', userId);
 };
 
 export const deleteAllStudents = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  await supabase.from('students').delete().eq('user_id', user.id);
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('students').delete().eq('user_id', userId);
 };
 
 export const loadHifzHistory = async (studentId: number): Promise<HifzHistory> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return {};
+  const userId = await getUserId();
+  if (!userId) return {};
 
   const { data, error } = await supabase
     .from('hifz_history')
     .select('year_key, value')
     .eq('student_id', studentId)
-    .eq('user_id', user.id);
+    .eq('user_id', userId);
 
   if (error) { console.error(error); return {}; }
 
@@ -75,16 +130,14 @@ export const loadHifzHistory = async (studentId: number): Promise<HifzHistory> =
 };
 
 export const saveHifzHistory = async (studentId: number, history: HifzHistory) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const userId = await getUserId();
+  if (!userId) return;
 
-  for (const [yearKey, value] of Object.entries(history)) {
-    await supabase
-      .from('hifz_history')
-      .upsert(
-        { student_id: studentId, user_id: user.id, year_key: yearKey, value: value || '0' },
-        { onConflict: 'student_id,year_key' }
-      );
+  const rows = Object.entries(history).map(([yearKey, value]) => ({
+    student_id: studentId, user_id: userId, year_key: yearKey, value: value || '0'
+  }));
+  if (rows.length > 0) {
+    await supabase.from('hifz_history').upsert(rows, { onConflict: 'student_id,year_key' });
   }
 };
 
@@ -94,15 +147,15 @@ export const loadYearData = async (year: string, studentId: number): Promise<Yea
     memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
   };
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return defaultData;
+  const userId = await getUserId();
+  if (!userId) return defaultData;
 
   const { data, error } = await supabase
     .from('year_data')
     .select('*')
     .eq('student_id', studentId)
     .eq('year', year)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (error || !data) return defaultData;
@@ -123,14 +176,14 @@ export const loadYearData = async (year: string, studentId: number): Promise<Yea
 };
 
 export const saveYearData = async (year: string, studentId: number, data: YearData) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const userId = await getUserId();
+  if (!userId) return;
 
   await supabase
     .from('year_data')
     .upsert({
       student_id: studentId,
-      user_id: user.id,
+      user_id: userId,
       year,
       base_hifz: data.baseHifz,
       total_hifz: data.totalHifz,
@@ -147,25 +200,25 @@ export const saveYearData = async (year: string, studentId: number, data: YearDa
 };
 
 export const getActiveYear = async (): Promise<string> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return '1447';
+  const userId = await getUserId();
+  if (!userId) return '1447';
 
   const { data } = await supabase
     .from('user_settings')
     .select('active_year')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle();
 
   return data?.active_year || '1447';
 };
 
 export const setActiveYear = async (year: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const userId = await getUserId();
+  if (!userId) return;
 
   await supabase
     .from('user_settings')
-    .upsert({ user_id: user.id, active_year: year }, { onConflict: 'user_id' });
+    .upsert({ user_id: userId, active_year: year }, { onConflict: 'user_id' });
 };
 
 export const migrateYearData = async (newYear: string, students: { id: number }[]) => {

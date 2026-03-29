@@ -9,6 +9,7 @@ import { Plus, Printer, Trash2, Calendar, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
+  loadAllStudentsWithData,
   loadGlobalStudents,
   saveStudent,
   deleteAllStudents,
@@ -30,16 +31,7 @@ const Index = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const globalStudents = await loadGlobalStudents();
-    
-    const studentsWithData = await Promise.all(
-      globalStudents.map(async (student) => ({
-        ...student,
-        hifzHistory: await loadHifzHistory(student.id),
-        yearData: await loadYearData(currentYear, student.id),
-      }))
-    );
-
+    const studentsWithData = await loadAllStudentsWithData(currentYear);
     setStudents(studentsWithData);
     setLoading(false);
   }, [currentYear]);
