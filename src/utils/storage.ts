@@ -1,16 +1,29 @@
 import { Student, HifzHistory, YearData } from "@/types/student";
 import { supabase } from "@/integrations/supabase/client";
 
+// ===== Helper: get cached user =====
+let cachedUserId: string | null = null;
+
+const getUserId = async (): Promise<string | null> => {
+  if (cachedUserId) return cachedUserId;
+  const { data: { user } } = await supabase.auth.getUser();
+  cachedUserId = user?.id || null;
+  return cachedUserId;
+};
+
+// Clear cache on auth state change
+supabase.auth.onAuthStateChange(() => { cachedUserId = null; });
+
 // ===== Supabase-based storage functions =====
 
 export const loadGlobalStudents = async (): Promise<Student[]> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getUserId();
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from('students')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('id');
 
   if (error) {
@@ -19,6 +32,50 @@ export const loadGlobalStudents = async (): Promise<Student[]> => {
   }
 
   return data.map(s => ({ id: s.id, name: s.name, teacher: s.teacher }));
+};
+
+// ===== Batch loading: single query for all students =====
+
+export const loadAllStudentsWithData = async (currentYear: string): Promise<Student[]> => {
+  const userId = await getUserId();
+  if (!userId) return [];
+
+  const [studentsRes, historyRes, yearDataRes] = await Promise.all([
+    supabase.from('students').select('*').eq('user_id', userId).order('id'),
+    supabase.from('hifz_history').select('*').eq('user_id', userId),
+    supabase.from('year_data').select('*').eq('user_id', userId).eq('year', currentYear),
+  ]);
+
+  if (studentsRes.error) { console.error(studentsRes.error); return []; }
+
+  const historyMap: Record<number, HifzHistory> = {};
+  (historyRes.data || []).forEach(row => {
+    if (!historyMap[row.student_id]) historyMap[row.student_id] = {};
+    historyMap[row.student_id][row.year_key] = row.value;
+  });
+
+  const yearDataMap: Record<number, YearData> = {};
+  (yearDataRes.data || []).forEach(row => {
+    yearDataMap[row.student_id] = {
+      baseHifz: row.base_hifz, totalHifz: row.total_hifz, parts: row.parts,
+      annual: row.annual, recitation: row.recitation, memorization: row.memorization,
+      total: row.total, grade: row.grade, prize: row.prize,
+      statusPrize: row.status_prize, rank: row.rank,
+    };
+  });
+
+  const defaultYearData: YearData = {
+    baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
+    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+  };
+
+  return studentsRes.data.map(s => ({
+    id: s.id,
+    name: s.name,
+    teacher: s.teacher,
+    hifzHistory: historyMap[s.id] || {},
+    yearData: yearDataMap[s.id] || { ...defaultYearData },
+  }));
 };
 
 export const saveStudent = async (student: { id?: number; name: string; teacher: string }): Promise<number | null> => {
