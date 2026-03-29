@@ -39,8 +39,39 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
     return uniqueTeachers.sort((a, b) => a.localeCompare(b, 'ar'));
   }, [students]);
 
+  const currentYearNum = parseInt(currentYear);
+
+  const getStudentSortValue = useCallback((student: Student, field: SortField): string | number => {
+    const parts = parseFloat(student.yearData?.parts || '0');
+    const totalScore = parseFloat(student.yearData?.total || '0');
+    const isActive = parts > 0 || totalScore > 0;
+    const baseHifz = calculateBaseHifz(student.hifzHistory || {}, currentYearNum);
+
+    switch (field) {
+      case 'name': return student.name || '';
+      case 'teacher': return student.teacher || '';
+      case 'baseHifz': return baseHifz;
+      case 'parts': return parts;
+      case 'totalHifz': return Math.min(baseHifz + parts, 30);
+      case 'annual': return parseFloat(student.yearData?.annual || '0');
+      case 'recitation': return parseFloat(student.yearData?.recitation || '0');
+      case 'memorization': return parseFloat(student.yearData?.memorization || '0');
+      case 'total': return totalScore;
+      case 'status': return isActive ? 1 : 0;
+      case 'grade': {
+        const { grade } = calculateGrade(totalScore);
+        const order: Record<string, number> = { 'ممتاز': 5, 'جيد جداً': 4, 'جيد': 3, 'مقبول': 2, 'ضعيف': 1, '': 0 };
+        return order[grade] || 0;
+      }
+      case 'prize': return parseFloat(student.yearData?.prize || '0');
+      case 'statusPrize': return parseFloat(student.yearData?.statusPrize || '0');
+      case 'rank': return parseFloat(student.yearData?.rank || '0') || 9999;
+      default: return 0;
+    }
+  }, [currentYearNum]);
+
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
+    const filtered = students.filter(student => {
       if (selectedTeacher !== "all" && student.teacher !== selectedTeacher) return false;
       if (nameFilter && !student.name.includes(nameFilter)) return false;
 
@@ -53,14 +84,12 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
         if (statusFilter === "inactive" && isActive) return false;
       }
 
-      // فلترة حسب التقدير
       if (gradeFilter !== "all") {
         const totalScore = parseFloat(student.yearData?.total || '0');
         const { grade } = calculateGrade(totalScore);
         if (grade !== gradeFilter) return false;
       }
 
-      // فلترة حسب الحفظ الجديد
       if (partsFilter) {
         const minParts = parseFloat(partsFilter) || 0;
         if (parts < minParts) return false;
@@ -68,7 +97,18 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
 
       return true;
     });
-  }, [students, selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter]);
+
+    if (sortField && sortDirection) {
+      filtered.sort((a, b) => {
+        const aVal = getStudentSortValue(a, sortField);
+        const bVal = getStudentSortValue(b, sortField);
+        const cmp = typeof aVal === 'string' ? aVal.localeCompare(bVal as string, 'ar') : (aVal as number) - (bVal as number);
+        return sortDirection === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    return filtered;
+  }, [students, selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection, getStudentSortValue]);
 
   const hasFilters = selectedTeacher !== "all" || nameFilter !== "" || statusFilter !== "all" || gradeFilter !== "all" || partsFilter !== "";
 
