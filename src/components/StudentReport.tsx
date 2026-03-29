@@ -74,40 +74,76 @@ export const StudentReport = ({ student }: Props) => {
     const data = await generateReport();
     setReports(data);
     setShowReport(true);
-    
-    setTimeout(() => {
-      const printContent = reportRef.current;
-      if (!printContent) return;
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
-      printWindow.document.write(`
-        <html dir="rtl"><head><title>تقرير ${student.name}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; color: #1a3a2a; }
-          .header { text-align: center; margin-bottom: 24px; border-bottom: 3px solid #2d7a52; padding-bottom: 16px; }
-          .header img { height: 80px; margin-bottom: 8px; }
-          .header h1 { font-size: 20px; color: #2d7a52; }
-          .header h2 { font-size: 16px; color: #555; margin-top: 4px; }
-          .student-info { background: #f0f7f3; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 24px; }
-          .student-info div { font-size: 14px; }
-          .student-info strong { color: #2d7a52; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
-          th { background: #2d7a52; color: white; padding: 8px 4px; border: 1px solid #1a5a38; }
-          td { padding: 6px 4px; border: 1px solid #ccc; text-align: center; }
-          tr:nth-child(even) { background: #f9fdfb; }
-          .total-row { background: #e8f5ee !important; font-weight: bold; font-size: 14px; }
-          .total-row td { border-top: 2px solid #2d7a52; }
-          .active { color: #16a34a; font-weight: bold; }
-          .inactive { color: #dc2626; font-weight: bold; }
-          .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #888; border-top: 1px solid #ddd; padding-top: 12px; }
-          @media print { body { padding: 10px; } }
-        </style></head><body>${printContent.innerHTML}</body></html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-    }, 200);
+
+    const calcTotalPrize = data.reduce((sum, r) => sum + r.prize, 0);
+    const calcTotalPrizeByStatus = data.reduce((sum, r) => sum + r.prizeByStatus, 0);
+
+    const rows = data.map(r => `<tr>
+      <td>${r.year}هـ</td><td>${r.baseHifz || '-'}</td><td>${r.parts || '-'}</td>
+      <td>${r.totalHifz >= 30 ? 'خاتم ✨' : r.totalHifz || '-'}</td>
+      <td>${r.annual || '-'}</td><td>${r.recitation || '-'}</td><td>${r.memorization || '-'}</td>
+      <td>${r.totalScore || '-'}</td><td>${r.grade || '-'}</td>
+      <td class="${r.isActive ? 'active' : 'inactive'}">${r.isActive ? 'نشط' : 'منقطع'}</td>
+      <td>${r.prize.toLocaleString()}</td><td>${r.prizeByStatus.toLocaleString()}</td>
+    </tr>`).join('');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html dir="rtl"><head><title>تقرير ${student.name}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; color: #1a3a2a; }
+        .header { text-align: center; margin-bottom: 24px; border-bottom: 3px solid #2d7a52; padding-bottom: 16px; }
+        .header img { height: 80px; margin-bottom: 8px; }
+        .header h1 { font-size: 20px; color: #2d7a52; }
+        .header h2 { font-size: 16px; color: #555; margin-top: 4px; }
+        .student-info { background: #f0f7f3; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 24px; }
+        .student-info div { font-size: 14px; }
+        .student-info strong { color: #2d7a52; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+        th { background: #2d7a52; color: white; padding: 8px 4px; border: 1px solid #1a5a38; }
+        td { padding: 6px 4px; border: 1px solid #ccc; text-align: center; }
+        tr:nth-child(even) { background: #f9fdfb; }
+        .total-row { background: #e8f5ee !important; font-weight: bold; font-size: 14px; }
+        .total-row td { border-top: 2px solid #2d7a52; }
+        .active { color: #16a34a; font-weight: bold; }
+        .inactive { color: #dc2626; font-weight: bold; }
+        .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #888; border-top: 1px solid #ddd; padding-top: 12px; }
+        @media print { body { padding: 10px; } }
+      </style></head><body>
+        <div class="header">
+          <img src="${logo}" alt="الشعار" />
+          <h1>مركز إنماء الأهلي الخيري</h1>
+          <h2>تقرير المسابقة الرمضانية - ${student.name}</h2>
+        </div>
+        <div class="student-info">
+          <div><strong>الطالبة:</strong> ${student.name}</div>
+          <div><strong>المعلمة:</strong> ${student.teacher}</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>العام</th><th>الحفظ السابق</th><th>حفظ جديد</th><th>الإجمالي</th>
+            <th>سنة</th><th>تلاوة</th><th>حفظ</th><th>المجموع</th>
+            <th>التقدير</th><th>الحالة</th><th>المكافأة</th><th>المكافأة حسب الحالة</th>
+          </tr></thead>
+          <tbody>
+            ${rows}
+            <tr class="total-row">
+              <td colspan="10">إجمالي المكافآت</td>
+              <td>${calcTotalPrize.toLocaleString()}</td>
+              <td>${calcTotalPrizeByStatus.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          تصميم أ/ مختار الكمالي - ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   };
 
   const totalPrize = reports.reduce((sum, r) => sum + r.prize, 0);
