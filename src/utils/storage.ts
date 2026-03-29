@@ -147,15 +147,15 @@ export const loadYearData = async (year: string, studentId: number): Promise<Yea
     memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
   };
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return defaultData;
+  const userId = await getUserId();
+  if (!userId) return defaultData;
 
   const { data, error } = await supabase
     .from('year_data')
     .select('*')
     .eq('student_id', studentId)
     .eq('year', year)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (error || !data) return defaultData;
