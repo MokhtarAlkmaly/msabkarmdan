@@ -113,14 +113,14 @@ export const deleteAllStudents = async () => {
 };
 
 export const loadHifzHistory = async (studentId: number): Promise<HifzHistory> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return {};
+  const userId = await getUserId();
+  if (!userId) return {};
 
   const { data, error } = await supabase
     .from('hifz_history')
     .select('year_key, value')
     .eq('student_id', studentId)
-    .eq('user_id', user.id);
+    .eq('user_id', userId);
 
   if (error) { console.error(error); return {}; }
 
