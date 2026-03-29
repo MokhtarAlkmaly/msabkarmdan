@@ -233,7 +233,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
 
       <div className="overflow-x-auto rounded-lg border border-border shadow-lg">
         <table className="w-full border-collapse bg-card text-sm">
-          <TableHeader currentYear={currentYear} />
+          <TableHeader currentYear={currentYear} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
           <tbody>
             {filteredStudents.map((student, index) => (
               <TableRow
