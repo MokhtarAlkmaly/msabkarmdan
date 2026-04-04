@@ -31,7 +31,7 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
   );
 
   return (
-    <thead className="bg-primary text-primary-foreground sticky top-0 z-10">
+    <thead className="bg-primary text-primary-foreground sticky top-0 z-10 whitespace-normal">
       <tr>
         {sortableHeader('م', 'index', undefined, 2)}
         {sortableHeader('اسم الطالبة', 'name', 'min-w-[150px]', 2)}
