@@ -37,7 +37,7 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
         {sortableHeader('اسم الطالبة', 'name', 'min-w-[150px]', 2)}
         {sortableHeader('المعلمة', 'teacher', 'min-w-[120px]', 2)}
         <th rowSpan={2} className="border border-border p-2 min-w-[80px] bg-accent/20 cursor-pointer hover:bg-accent/40 select-none transition-colors" onClick={() => onSort('baseHifz')}>
-          <span className="flex items-center justify-center gap-0.5">الحفظ السابق<SortIcon field="baseHifz" sortField={sortField} sortDirection={sortDirection} /></span>
+          <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">الحفظ السابق<SortIcon field="baseHifz" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
         {sortableHeader(`حفظ جديد (${currentYear})`, 'parts', 'min-w-[80px]', 2)}
         {sortableHeader('الإجمالي التراكمي', 'totalHifz', 'min-w-[100px]', 2)}
