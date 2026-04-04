@@ -23,7 +23,7 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
       className={`border border-border p-2 min-w-[50px] cursor-pointer hover:bg-primary/80 select-none transition-colors ${extra || ''}`}
       onClick={() => onSort(field)}
     >
-      <span className="flex items-center justify-center gap-0.5">
+      <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">
         {label}
         <SortIcon field={field} sortField={sortField} sortDirection={sortDirection} />
       </span>
