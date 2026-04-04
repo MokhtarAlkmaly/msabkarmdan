@@ -17,8 +17,9 @@ const SortIcon = ({ field, sortField, sortDirection }: { field: SortField; sortF
 };
 
 export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: Props) => {
-  const sortableHeader = (label: string, field: SortField, extra?: string) => (
+  const sortableHeader = (label: string, field: SortField, extra?: string, rowSpan?: number) => (
     <th
+      rowSpan={rowSpan}
       className={`border border-border p-2 min-w-[50px] cursor-pointer hover:bg-primary/80 select-none transition-colors ${extra || ''}`}
       onClick={() => onSort(field)}
     >
@@ -32,20 +33,20 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
   return (
     <thead className="bg-primary text-primary-foreground sticky top-0 z-10">
       <tr>
-        {sortableHeader('م', 'index')}
-        {sortableHeader('اسم الطالبة', 'name', 'min-w-[150px]')}
-        {sortableHeader('المعلمة', 'teacher', 'min-w-[120px]')}
-        <th className="border border-border p-2 min-w-[80px] bg-accent/20 cursor-pointer hover:bg-accent/40 select-none transition-colors" onClick={() => onSort('baseHifz')}>
+        {sortableHeader('م', 'index', undefined, 2)}
+        {sortableHeader('اسم الطالبة', 'name', 'min-w-[150px]', 2)}
+        {sortableHeader('المعلمة', 'teacher', 'min-w-[120px]', 2)}
+        <th rowSpan={2} className="border border-border p-2 min-w-[80px] bg-accent/20 cursor-pointer hover:bg-accent/40 select-none transition-colors" onClick={() => onSort('baseHifz')}>
           <span className="flex items-center justify-center gap-0.5">الحفظ السابق<SortIcon field="baseHifz" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
-        {sortableHeader(`حفظ جديد (${currentYear})`, 'parts', 'min-w-[80px]')}
-        {sortableHeader('الإجمالي التراكمي', 'totalHifz', 'min-w-[100px]')}
+        {sortableHeader(`حفظ جديد (${currentYear})`, 'parts', 'min-w-[80px]', 2)}
+        {sortableHeader('الإجمالي التراكمي', 'totalHifz', 'min-w-[100px]', 2)}
         <th colSpan={4} className="border border-border p-2 bg-success/20">الدرجات</th>
-        {sortableHeader('الحالة', 'status', 'min-w-[70px]')}
-        {sortableHeader('التقدير', 'grade', 'min-w-[80px]')}
-        {sortableHeader('المكافأة', 'prize', 'min-w-[80px]')}
-        {sortableHeader('المكافأة حسب الحالة', 'statusPrize', 'min-w-[90px]')}
-        {sortableHeader('ترتيب', 'rank', 'min-w-[60px]')}
+        {sortableHeader('الحالة', 'status', 'min-w-[70px]', 2)}
+        {sortableHeader('التقدير', 'grade', 'min-w-[80px]', 2)}
+        {sortableHeader('المكافأة', 'prize', 'min-w-[80px]', 2)}
+        {sortableHeader('المكافأة حسب الحالة', 'statusPrize', 'min-w-[90px]', 2)}
+        {sortableHeader('ترتيب', 'rank', 'min-w-[60px]', 2)}
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">تقرير</th>
         <th rowSpan={2} className="border border-border p-2 min-w-[60px]">حذف</th>
       </tr>
