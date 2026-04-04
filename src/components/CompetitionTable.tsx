@@ -153,12 +153,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
     }).join('');
 
     const totalPrize = filteredStudents.reduce((sum, s) => sum + (parseFloat(s.yearData?.prize || '0')), 0);
-    const totalPrizeByStatus = filteredStudents.reduce((sum, s) => {
-      const parts = parseFloat(s.yearData?.parts || '0');
-      const total = parseFloat(s.yearData?.total || '0');
-      const isActive = parts > 0 || total > 0;
-      return sum + (isActive ? parseFloat(s.yearData?.prize || '0') : 0);
-    }, 0);
+    const totalStatusPrize = filteredStudents.reduce((sum, s) => sum + (parseFloat(s.yearData?.statusPrize || '0')), 0);
 
     printWindow.document.write(`
       <html dir="rtl"><head><title>تقرير مصفى - ${currentYear}هـ</title>
