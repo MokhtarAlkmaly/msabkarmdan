@@ -132,7 +132,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
       const isActive = parts > 0 || totalScore > 0;
       const { grade } = calculateGrade(totalScore);
       const prize = parseFloat(s.yearData?.prize || '0');
-      const prizeByStatus = isActive ? prize : 0;
+      const statusPrize = parseFloat(s.yearData?.statusPrize || '0');
 
       return `<tr>
         <td>${i + 1}</td>
@@ -148,7 +148,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
         <td class="${isActive ? 'active' : 'inactive'}">${isActive ? 'نشط' : 'منقطع'}</td>
         <td>${grade || '-'}</td>
         <td>${prize.toLocaleString()}</td>
-        <td>${prizeByStatus.toLocaleString()}</td>
+        <td>${statusPrize.toLocaleString()}</td>
       </tr>`;
     }).join('');
 
