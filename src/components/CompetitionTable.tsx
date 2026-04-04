@@ -196,7 +196,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
             <tr class="total-row">
               <td colspan="12">إجمالي المكافآت</td>
               <td>${totalPrize.toLocaleString()}</td>
-              <td>${totalPrizeByStatus.toLocaleString()}</td>
+              <td>${totalStatusPrize.toLocaleString()}</td>
             </tr>
           </tbody>
         </table>
