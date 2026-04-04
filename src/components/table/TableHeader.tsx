@@ -52,16 +52,16 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
       </tr>
       <tr>
         <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('annual')}>
-          <span className="flex items-center justify-center gap-0.5">سنة (20)<SortIcon field="annual" sortField={sortField} sortDirection={sortDirection} /></span>
+          <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">سنة (20)<SortIcon field="annual" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
         <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('recitation')}>
-          <span className="flex items-center justify-center gap-0.5">تلاوة (20)<SortIcon field="recitation" sortField={sortField} sortDirection={sortDirection} /></span>
+          <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">تلاوة (20)<SortIcon field="recitation" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
         <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('memorization')}>
-          <span className="flex items-center justify-center gap-0.5">حفظ (60)<SortIcon field="memorization" sortField={sortField} sortDirection={sortDirection} /></span>
+          <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">حفظ (60)<SortIcon field="memorization" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
         <th className="border border-border p-2 min-w-[70px] bg-success/20 cursor-pointer hover:bg-success/40 select-none transition-colors" onClick={() => onSort('total')}>
-          <span className="flex items-center justify-center gap-0.5">مجموع<SortIcon field="total" sortField={sortField} sortDirection={sortDirection} /></span>
+          <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">مجموع<SortIcon field="total" sortField={sortField} sortDirection={sortDirection} /></span>
         </th>
       </tr>
     </thead>
