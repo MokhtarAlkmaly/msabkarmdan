@@ -23,7 +23,7 @@ interface YearReport {
   totalScore: number;
   grade: string;
   prize: number;
-  prizeByStatus: number;
+  statusPrize: number;
   isActive: boolean;
 }
 
@@ -61,10 +61,11 @@ export const StudentReport = ({ student }: Props) => {
       const { grade, pricePerPart } = calculateGrade(totalScore);
       const prize = calculatePrize(parts, pricePerPart);
       const isActive = parts > 0 || totalScore > 0;
+      const statusPrize = parseFloat(yearData.statusPrize || '0');
 
       results.push({
         year, baseHifz, parts, totalHifz, annual, recitation, memorization,
-        totalScore, grade, prize, prizeByStatus: isActive ? prize : 0, isActive,
+        totalScore, grade, prize, statusPrize, isActive,
       });
     }
     return results;
@@ -76,7 +77,7 @@ export const StudentReport = ({ student }: Props) => {
     setShowReport(true);
 
     const calcTotalPrize = data.reduce((sum, r) => sum + r.prize, 0);
-    const calcTotalPrizeByStatus = data.reduce((sum, r) => sum + r.prizeByStatus, 0);
+    const calcTotalStatusPrize = data.reduce((sum, r) => sum + r.statusPrize, 0);
 
     const rows = data.map(r => `<tr>
       <td>${r.year}هـ</td><td>${r.baseHifz || '-'}</td><td>${r.parts || '-'}</td>
@@ -84,7 +85,7 @@ export const StudentReport = ({ student }: Props) => {
       <td>${r.annual || '-'}</td><td>${r.recitation || '-'}</td><td>${r.memorization || '-'}</td>
       <td>${r.totalScore || '-'}</td><td>${r.grade || '-'}</td>
       <td class="${r.isActive ? 'active' : 'inactive'}">${r.isActive ? 'نشط' : 'منقطع'}</td>
-      <td>${r.prize.toLocaleString()}</td><td>${r.prizeByStatus.toLocaleString()}</td>
+      <td>${r.prize.toLocaleString()}</td><td>${r.statusPrize.toLocaleString()}</td>
     </tr>`).join('');
 
     const printWindow = window.open('', '_blank');
@@ -132,7 +133,7 @@ export const StudentReport = ({ student }: Props) => {
             <tr class="total-row">
               <td colspan="10">إجمالي المكافآت</td>
               <td>${calcTotalPrize.toLocaleString()}</td>
-              <td>${calcTotalPrizeByStatus.toLocaleString()}</td>
+              <td>${calcTotalStatusPrize.toLocaleString()}</td>
             </tr>
           </tbody>
         </table>
@@ -147,7 +148,7 @@ export const StudentReport = ({ student }: Props) => {
   };
 
   const totalPrize = reports.reduce((sum, r) => sum + r.prize, 0);
-  const totalPrizeByStatus = reports.reduce((sum, r) => sum + r.prizeByStatus, 0);
+  const totalStatusPrize = reports.reduce((sum, r) => sum + r.statusPrize, 0);
 
   return (
     <Dialog onOpenChange={(open) => { if (!open) { setShowReport(false); setReports([]); } }}>
@@ -204,13 +205,13 @@ export const StudentReport = ({ student }: Props) => {
                       <td>{r.annual || '-'}</td><td>{r.recitation || '-'}</td><td>{r.memorization || '-'}</td>
                       <td>{r.totalScore || '-'}</td><td>{r.grade || '-'}</td>
                       <td className={r.isActive ? 'active' : 'inactive'}>{r.isActive ? 'نشط' : 'منقطع'}</td>
-                      <td>{r.prize.toLocaleString()}</td><td>{r.prizeByStatus.toLocaleString()}</td>
+                      <td>{r.prize.toLocaleString()}</td><td>{r.statusPrize.toLocaleString()}</td>
                     </tr>
                   ))}
                   <tr className="total-row">
                     <td colSpan={10}>إجمالي المكافآت</td>
                     <td>{totalPrize.toLocaleString()}</td>
-                    <td>{totalPrizeByStatus.toLocaleString()}</td>
+                    <td>{totalStatusPrize.toLocaleString()}</td>
                   </tr>
                 </tbody>
               </table>

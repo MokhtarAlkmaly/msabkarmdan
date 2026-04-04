@@ -132,7 +132,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
       const isActive = parts > 0 || totalScore > 0;
       const { grade } = calculateGrade(totalScore);
       const prize = parseFloat(s.yearData?.prize || '0');
-      const prizeByStatus = isActive ? prize : 0;
+      const statusPrize = parseFloat(s.yearData?.statusPrize || '0');
 
       return `<tr>
         <td>${i + 1}</td>
@@ -148,17 +148,12 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
         <td class="${isActive ? 'active' : 'inactive'}">${isActive ? 'نشط' : 'منقطع'}</td>
         <td>${grade || '-'}</td>
         <td>${prize.toLocaleString()}</td>
-        <td>${prizeByStatus.toLocaleString()}</td>
+        <td>${statusPrize.toLocaleString()}</td>
       </tr>`;
     }).join('');
 
     const totalPrize = filteredStudents.reduce((sum, s) => sum + (parseFloat(s.yearData?.prize || '0')), 0);
-    const totalPrizeByStatus = filteredStudents.reduce((sum, s) => {
-      const parts = parseFloat(s.yearData?.parts || '0');
-      const total = parseFloat(s.yearData?.total || '0');
-      const isActive = parts > 0 || total > 0;
-      return sum + (isActive ? parseFloat(s.yearData?.prize || '0') : 0);
-    }, 0);
+    const totalStatusPrize = filteredStudents.reduce((sum, s) => sum + (parseFloat(s.yearData?.statusPrize || '0')), 0);
 
     printWindow.document.write(`
       <html dir="rtl"><head><title>تقرير مصفى - ${currentYear}هـ</title>
@@ -201,7 +196,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
             <tr class="total-row">
               <td colspan="12">إجمالي المكافآت</td>
               <td>${totalPrize.toLocaleString()}</td>
-              <td>${totalPrizeByStatus.toLocaleString()}</td>
+              <td>${totalStatusPrize.toLocaleString()}</td>
             </tr>
           </tbody>
         </table>
