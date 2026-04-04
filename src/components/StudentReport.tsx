@@ -85,7 +85,7 @@ export const StudentReport = ({ student }: Props) => {
       <td>${r.annual || '-'}</td><td>${r.recitation || '-'}</td><td>${r.memorization || '-'}</td>
       <td>${r.totalScore || '-'}</td><td>${r.grade || '-'}</td>
       <td class="${r.isActive ? 'active' : 'inactive'}">${r.isActive ? 'نشط' : 'منقطع'}</td>
-      <td>${r.prize.toLocaleString()}</td><td>${r.prizeByStatus.toLocaleString()}</td>
+      <td>${r.prize.toLocaleString()}</td><td>${r.statusPrize.toLocaleString()}</td>
     </tr>`).join('');
 
     const printWindow = window.open('', '_blank');
