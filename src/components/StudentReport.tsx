@@ -23,7 +23,7 @@ interface YearReport {
   totalScore: number;
   grade: string;
   prize: number;
-  prizeByStatus: number;
+  statusPrize: number;
   isActive: boolean;
 }
 
