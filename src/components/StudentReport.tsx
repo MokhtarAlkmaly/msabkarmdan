@@ -61,10 +61,11 @@ export const StudentReport = ({ student }: Props) => {
       const { grade, pricePerPart } = calculateGrade(totalScore);
       const prize = calculatePrize(parts, pricePerPart);
       const isActive = parts > 0 || totalScore > 0;
+      const statusPrize = parseFloat(yearData.statusPrize || '0');
 
       results.push({
         year, baseHifz, parts, totalHifz, annual, recitation, memorization,
-        totalScore, grade, prize, prizeByStatus: isActive ? prize : 0, isActive,
+        totalScore, grade, prize, statusPrize, isActive,
       });
     }
     return results;
