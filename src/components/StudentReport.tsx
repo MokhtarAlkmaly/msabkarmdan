@@ -148,7 +148,7 @@ export const StudentReport = ({ student }: Props) => {
   };
 
   const totalPrize = reports.reduce((sum, r) => sum + r.prize, 0);
-  const totalPrizeByStatus = reports.reduce((sum, r) => sum + r.prizeByStatus, 0);
+  const totalStatusPrize = reports.reduce((sum, r) => sum + r.statusPrize, 0);
 
   return (
     <Dialog onOpenChange={(open) => { if (!open) { setShowReport(false); setReports([]); } }}>
