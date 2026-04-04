@@ -77,7 +77,7 @@ export const StudentReport = ({ student }: Props) => {
     setShowReport(true);
 
     const calcTotalPrize = data.reduce((sum, r) => sum + r.prize, 0);
-    const calcTotalPrizeByStatus = data.reduce((sum, r) => sum + r.prizeByStatus, 0);
+    const calcTotalStatusPrize = data.reduce((sum, r) => sum + r.statusPrize, 0);
 
     const rows = data.map(r => `<tr>
       <td>${r.year}هـ</td><td>${r.baseHifz || '-'}</td><td>${r.parts || '-'}</td>
