@@ -211,7 +211,7 @@ export const StudentReport = ({ student }: Props) => {
                   <tr className="total-row">
                     <td colSpan={10}>إجمالي المكافآت</td>
                     <td>{totalPrize.toLocaleString()}</td>
-                    <td>{totalPrizeByStatus.toLocaleString()}</td>
+                    <td>{totalStatusPrize.toLocaleString()}</td>
                   </tr>
                 </tbody>
               </table>
