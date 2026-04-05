@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Student } from "@/types/student";
+import { Student, HifzHistory, YearData } from "@/types/student";
 import { TableHeader } from "./table/TableHeader";
 import { SortField, SortDirection } from "./table/TableHeader";
 import { TableRow } from "./table/TableRow";
@@ -7,14 +7,23 @@ import { TableFilters } from "./table/TableFilters";
 import { calculateGrade, calculateBaseHifz } from "@/utils/calculations";
 import logo from "@/assets/logo.png";
 
+interface DirtyData {
+  name: string;
+  teacher: string;
+  history: HifzHistory;
+  yearData: YearData;
+}
+
 interface Props {
   students: Student[];
   currentYear: string;
   onUpdate: () => void;
   onDelete: (id: number) => void;
+  dirtyMap: Record<number, DirtyData>;
+  onDirtyChange: (studentId: number, data: DirtyData) => void;
 }
 
-export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: Props) => {
+export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, dirtyMap, onDirtyChange }: Props) => {
   const [selectedTeacher, setSelectedTeacher] = useState<string>("all");
   const [nameFilter, setNameFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -236,8 +245,8 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete }: 
                 student={student}
                 index={index + 1}
                 currentYear={currentYear}
-                onUpdate={onUpdate}
                 onDelete={onDelete}
+                onDirtyChange={onDirtyChange}
               />
             ))}
           </tbody>

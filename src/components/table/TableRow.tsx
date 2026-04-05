@@ -3,12 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { StudentReport } from "@/components/StudentReport";
-import { useState, useEffect } from "react";
-import {
-  saveHifzHistory,
-  saveYearData,
-  saveStudent,
-} from "@/utils/storage";
+import { useState, useEffect, useCallback } from "react";
 import { calculateBaseHifz, calculateGrade, calculatePrize } from "@/utils/calculations";
 import { HifzHistory, YearData } from "@/types/student";
 
@@ -16,11 +11,11 @@ interface Props {
   student: Student;
   index: number;
   currentYear: string;
-  onUpdate: () => void;
   onDelete: (id: number) => void;
+  onDirtyChange: (studentId: number, data: { name: string; teacher: string; history: HifzHistory; yearData: YearData }) => void;
 }
 
-export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Props) => {
+export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange }: Props) => {
   const currentYearNum = parseInt(currentYear);
   const [name, setName] = useState(student.name);
   const [teacher, setTeacher] = useState(student.teacher);
@@ -52,42 +47,43 @@ export const TableRow = ({ student, index, currentYear, onUpdate, onDelete }: Pr
   const isActive = parts > 0 || totalScore > 0;
   const isKhatim = totalHifz >= 30;
 
-  useEffect(() => {
-    const updatedData = {
-      ...yearData,
-      baseHifz: baseHifz.toString(),
-      totalHifz: totalHifz.toString(),
-      total: totalScore.toString(),
-      grade,
-      prize: prize.toString(),
+  const notifyDirty = useCallback((newName: string, newTeacher: string, newHistory: HifzHistory, newYearData: YearData) => {
+    const p = parseFloat(newYearData.parts) || 0;
+    const a = parseFloat(newYearData.annual) || 0;
+    const r = parseFloat(newYearData.recitation) || 0;
+    const m = parseFloat(newYearData.memorization) || 0;
+    const ts = Math.min(a + r + m, 100);
+    const bh = calculateBaseHifz(newHistory, currentYearNum);
+    const th = Math.min(bh + p, 30);
+    const { grade: g, pricePerPart: pp } = calculateGrade(ts);
+    const pr = calculatePrize(p, pp);
+
+    const updatedYearData: YearData = {
+      ...newYearData,
+      baseHifz: bh.toString(),
+      totalHifz: th.toString(),
+      total: ts.toString(),
+      grade: g,
+      prize: pr.toString(),
     };
-    saveYearData(currentYear, student.id, updatedData);
-  }, [baseHifz, totalHifz, totalScore, grade, prize, currentYear, student.id]);
 
-  const updateName = async (value: string) => {
+    onDirtyChange(student.id, { name: newName, teacher: newTeacher, history: newHistory, yearData: updatedYearData });
+  }, [student.id, currentYearNum, onDirtyChange]);
+
+  const updateName = (value: string) => {
     setName(value);
-    await saveStudent({ id: student.id, name: value, teacher });
-    onUpdate();
+    notifyDirty(value, teacher, history, yearData);
   };
 
-  const updateTeacher = async (value: string) => {
+  const updateTeacher = (value: string) => {
     setTeacher(value);
-    await saveStudent({ id: student.id, name, teacher: value });
-    onUpdate();
+    notifyDirty(name, value, history, yearData);
   };
 
-  const updateHistory = async (year: string, value: string) => {
-    const updated = { ...history, [year]: value };
-    setHistory(updated);
-    await saveHifzHistory(student.id, updated);
-    onUpdate();
-  };
-
-  const updateYearField = async (field: keyof YearData, value: string) => {
+  const updateYearField = (field: keyof YearData, value: string) => {
     const updated = { ...yearData, [field]: value };
     setYearData(updated);
-    await saveYearData(currentYear, student.id, updated);
-    onUpdate();
+    notifyDirty(name, teacher, history, updated);
   };
 
   return (
