@@ -219,8 +219,9 @@ const Index = () => {
             </div>
 
             <div className="text-sm text-left text-primary-foreground/90">
-              <div>التاريخ:</div>
-              <div className="font-semibold">{currentDate}</div>
+              <div className="font-semibold">{dayName}</div>
+              <div>{hijriDate}</div>
+              <div>{currentDate}</div>
               <Button
                 onClick={signOut}
                 variant="ghost"
