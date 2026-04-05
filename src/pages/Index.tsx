@@ -182,10 +182,17 @@ const Index = () => {
     }
   }, [students.length, currentYear]);
 
-  const currentDate = new Date().toLocaleDateString('ar-EG', {
+  const now = new Date();
+  const currentDate = now.toLocaleDateString('ar-EG', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
+  });
+  const dayName = now.toLocaleDateString('ar-EG', { weekday: 'long' });
+  const hijriDate = now.toLocaleDateString('ar-SA-u-ca-islamic-umalqura', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   return (
@@ -212,8 +219,9 @@ const Index = () => {
             </div>
 
             <div className="text-sm text-left text-primary-foreground/90">
-              <div>التاريخ:</div>
-              <div className="font-semibold">{currentDate}</div>
+              <div className="font-semibold">{dayName}</div>
+              <div>{hijriDate}</div>
+              <div>{currentDate}</div>
               <Button
                 onClick={signOut}
                 variant="ghost"
