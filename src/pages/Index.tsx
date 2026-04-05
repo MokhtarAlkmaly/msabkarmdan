@@ -162,24 +162,25 @@ const Index = () => {
     window.print();
   };
 
-  // حساب الترتيب
+  // حساب الترتيب - محلياً فقط بدون حفظ تلقائي
   useEffect(() => {
-    const updateRanks = async () => {
-      const { saveYearData: saveYD } = await import("@/utils/storage");
-      const sortedStudents = [...students]
-        .filter(s => parseFloat(s.yearData?.total || '0') > 0)
-        .sort((a, b) => parseFloat(b.yearData?.total || '0') - parseFloat(a.yearData?.total || '0'));
+    const sortedStudents = [...students]
+      .filter(s => parseFloat(s.yearData?.total || '0') > 0)
+      .sort((a, b) => parseFloat(b.yearData?.total || '0') - parseFloat(a.yearData?.total || '0'));
 
-      for (let i = 0; i < sortedStudents.length; i++) {
-        const student = sortedStudents[i];
-        if (student.yearData) {
-          student.yearData.rank = (i + 1).toString();
-          await saveYD(currentYear, student.id, student.yearData);
-        }
+    let changed = false;
+    for (let i = 0; i < sortedStudents.length; i++) {
+      const student = sortedStudents[i];
+      const newRank = (i + 1).toString();
+      if (student.yearData && student.yearData.rank !== newRank) {
+        student.yearData.rank = newRank;
+        changed = true;
       }
-    };
-    if (students.length > 0) updateRanks();
-  }, [students, currentYear]);
+    }
+    if (changed) {
+      setStudents(prev => [...prev]);
+    }
+  }, [students.length, currentYear]);
 
   const currentDate = new Date().toLocaleDateString('ar-EG', {
     year: 'numeric',
