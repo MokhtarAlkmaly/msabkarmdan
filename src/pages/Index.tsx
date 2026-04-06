@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Plus, Printer, Trash2, Calendar, LogOut, Save } from "lucide-react";
+import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -283,6 +284,13 @@ const Index = () => {
               <Trash2 className="h-4 w-4" />
               حذف جميع البيانات
             </Button>
+
+            <Link to="/media">
+              <Button variant="outline" className="gap-2">
+                <Camera className="h-4 w-4" />
+                الصور والفيديوهات
+              </Button>
+            </Link>
 
             <div className="mr-auto text-sm text-muted-foreground">
               عدد الطالبات: <span className="font-bold text-foreground">{students.length}</span>
