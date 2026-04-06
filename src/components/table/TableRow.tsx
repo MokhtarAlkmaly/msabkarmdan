@@ -18,20 +18,20 @@ interface Props {
 export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange }: Props) => {
   const currentYearNum = parseInt(currentYear);
   const [name, setName] = useState(student.name);
-  const [teacher, setTeacher] = useState(student.teacher);
   const [history, setHistory] = useState<HifzHistory>(student.hifzHistory || {});
   const [yearData, setYearData] = useState<YearData>(student.yearData || {
     baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
-    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+    teacher: ''
   });
 
   useEffect(() => {
     setName(student.name);
-    setTeacher(student.teacher);
     setHistory(student.hifzHistory || {});
     setYearData(student.yearData || {
       baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
-      memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+      memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+      teacher: ''
     });
   }, [student]);
 
@@ -47,7 +47,7 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange 
   const isActive = parts > 0 || totalScore > 0;
   const isKhatim = totalHifz >= 30;
 
-  const notifyDirty = useCallback((newName: string, newTeacher: string, newHistory: HifzHistory, newYearData: YearData) => {
+  const notifyDirty = useCallback((newName: string, newHistory: HifzHistory, newYearData: YearData) => {
     const p = parseFloat(newYearData.parts) || 0;
     const a = parseFloat(newYearData.annual) || 0;
     const r = parseFloat(newYearData.recitation) || 0;
@@ -67,23 +67,24 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange 
       prize: pr.toString(),
     };
 
-    onDirtyChange(student.id, { name: newName, teacher: newTeacher, history: newHistory, yearData: updatedYearData });
+    onDirtyChange(student.id, { name: newName, teacher: newYearData.teacher, history: newHistory, yearData: updatedYearData });
   }, [student.id, currentYearNum, onDirtyChange]);
 
   const updateName = (value: string) => {
     setName(value);
-    notifyDirty(value, teacher, history, yearData);
+    notifyDirty(value, history, yearData);
   };
 
   const updateTeacher = (value: string) => {
-    setTeacher(value);
-    notifyDirty(name, value, history, yearData);
+    const updated = { ...yearData, teacher: value };
+    setYearData(updated);
+    notifyDirty(name, history, updated);
   };
 
   const updateYearField = (field: keyof YearData, value: string) => {
     const updated = { ...yearData, [field]: value };
     setYearData(updated);
-    notifyDirty(name, teacher, history, updated);
+    notifyDirty(name, history, updated);
   };
 
   return (
@@ -95,7 +96,7 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange 
       </td>
 
       <td className="border border-border p-1">
-        <Input value={teacher} onChange={(e) => updateTeacher(e.target.value)} placeholder="المعلمة" className="text-center border-0 focus-visible:ring-1" />
+        <Input value={yearData.teacher} onChange={(e) => updateTeacher(e.target.value)} placeholder="المعلمة" className="text-center border-0 focus-visible:ring-1" />
       </td>
 
       <td className="border border-border p-1 bg-accent/10 text-center font-semibold">

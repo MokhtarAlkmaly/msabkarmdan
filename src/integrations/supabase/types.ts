@@ -150,6 +150,7 @@ export type Database = {
           recitation: string
           status_prize: string
           student_id: number
+          teacher: string
           total: string
           total_hifz: string
           updated_at: string
@@ -169,6 +170,7 @@ export type Database = {
           recitation?: string
           status_prize?: string
           student_id: number
+          teacher?: string
           total?: string
           total_hifz?: string
           updated_at?: string
@@ -188,6 +190,7 @@ export type Database = {
           recitation?: string
           status_prize?: string
           student_id?: number
+          teacher?: string
           total?: string
           total_hifz?: string
           updated_at?: string
