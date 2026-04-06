@@ -61,18 +61,20 @@ export const loadAllStudentsWithData = async (currentYear: string): Promise<Stud
       annual: row.annual, recitation: row.recitation, memorization: row.memorization,
       total: row.total, grade: row.grade, prize: row.prize,
       statusPrize: row.status_prize, rank: row.rank,
+      teacher: (row as any).teacher || '',
     };
   });
 
   const defaultYearData: YearData = {
     baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
-    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+    teacher: ''
   };
 
   return studentsRes.data.map(s => ({
     id: s.id,
     name: s.name,
-    teacher: s.teacher,
+    teacher: yearDataMap[s.id]?.teacher || s.teacher || '',
     hifzHistory: historyMap[s.id] || {},
     yearData: yearDataMap[s.id] || { ...defaultYearData },
   }));
@@ -144,7 +146,8 @@ export const saveHifzHistory = async (studentId: number, history: HifzHistory) =
 export const loadYearData = async (year: string, studentId: number): Promise<YearData> => {
   const defaultData: YearData = {
     baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
-    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+    teacher: ''
   };
 
   const userId = await getUserId();
@@ -172,6 +175,7 @@ export const loadYearData = async (year: string, studentId: number): Promise<Yea
     prize: data.prize,
     statusPrize: data.status_prize,
     rank: data.rank,
+    teacher: (data as any).teacher || '',
   };
 };
 
@@ -196,6 +200,7 @@ export const saveYearData = async (year: string, studentId: number, data: YearDa
       prize: data.prize,
       status_prize: data.statusPrize,
       rank: data.rank,
+      teacher: data.teacher || '',
     }, { onConflict: 'student_id,year' });
 };
 
