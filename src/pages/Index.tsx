@@ -285,6 +285,13 @@ const Index = () => {
               حذف جميع البيانات
             </Button>
 
+            <Link to="/media">
+              <Button variant="outline" className="gap-2">
+                <Camera className="h-4 w-4" />
+                الصور والفيديوهات
+              </Button>
+            </Link>
+
             <div className="mr-auto text-sm text-muted-foreground">
               عدد الطالبات: <span className="font-bold text-foreground">{students.length}</span>
             </div>
