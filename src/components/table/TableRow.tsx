@@ -96,7 +96,7 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange 
       </td>
 
       <td className="border border-border p-1">
-        <Input value={teacher} onChange={(e) => updateTeacher(e.target.value)} placeholder="المعلمة" className="text-center border-0 focus-visible:ring-1" />
+        <Input value={yearData.teacher} onChange={(e) => updateTeacher(e.target.value)} placeholder="المعلمة" className="text-center border-0 focus-visible:ring-1" />
       </td>
 
       <td className="border border-border p-1 bg-accent/10 text-center font-semibold">
