@@ -22,7 +22,8 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange 
   const [history, setHistory] = useState<HifzHistory>(student.hifzHistory || {});
   const [yearData, setYearData] = useState<YearData>(student.yearData || {
     baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
-    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+    memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+    teacher: ''
   });
 
   useEffect(() => {
@@ -31,7 +32,8 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange 
     setHistory(student.hifzHistory || {});
     setYearData(student.yearData || {
       baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
-      memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-'
+      memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+      teacher: ''
     });
   }, [student]);
 
