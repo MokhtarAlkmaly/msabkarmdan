@@ -49,6 +49,42 @@ export type Database = {
           },
         ]
       }
+      media: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          month: number
+          title: string
+          user_id: string
+          year: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number
+          file_type: string
+          id?: string
+          month: number
+          title?: string
+          user_id: string
+          year: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          month?: number
+          title?: string
+          user_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           created_at: string
