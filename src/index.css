@@ -122,16 +122,3 @@ All colors MUST be HSL.
   }
 }
 
-/* Force landscape orientation on mobile */
-@media screen and (max-width: 1024px) and (orientation: portrait) {
-  html {
-    transform: rotate(-90deg);
-    transform-origin: left top;
-    width: 100vh;
-    height: 100vw;
-    overflow-x: hidden;
-    position: absolute;
-    top: 100%;
-    left: 0;
-  }
-}
