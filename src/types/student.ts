@@ -15,6 +15,7 @@ export interface YearData {
   prize: string;
   statusPrize: string;
   rank: string;
+  teacher: string;
 }
 
 export interface Student {
