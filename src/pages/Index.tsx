@@ -19,6 +19,8 @@ import {
   saveHifzHistory,
   saveYearData,
   migrateYearData,
+  syncToCloud,
+  syncFromCloud,
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
