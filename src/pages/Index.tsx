@@ -342,7 +342,7 @@ const Index = () => {
 
             <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                {online ? <Wifi className="h-4 w-4 text-green-500" /> : <WifiOff className="h-4 w-4 text-red-500" />}
+                {online ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-destructive" />}
                 {online ? 'متصل' : 'غير متصل'}
               </span>
               <span>عدد الطالبات: <span className="font-bold text-foreground">{students.length}</span></span>
