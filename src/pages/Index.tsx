@@ -6,7 +6,7 @@ import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera } from "lucide-react";
+import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -19,6 +19,8 @@ import {
   saveHifzHistory,
   saveYearData,
   migrateYearData,
+  syncToCloud,
+  syncFromCloud,
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,11 +37,25 @@ const Index = () => {
   const [currentYear, setCurrentYear] = useState<string>("1447");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
   const isDirty = Object.keys(dirtyMap).length > 0;
+
+  // Track online/offline status
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,11 +95,17 @@ const Index = () => {
       }));
 
       setDirtyMap({});
+
+      // Sync to cloud
+      const synced = await syncToCloud();
+
       await loadData();
 
       toast({
         title: "تم الحفظ",
-        description: `تم حفظ بيانات ${entries.length} طالبة بنجاح`,
+        description: synced
+          ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
+          : `تم الحفظ محلياً (${entries.length} طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
       });
     } catch (error) {
       console.error('Save error:', error);
@@ -161,6 +183,22 @@ const Index = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleSyncFromCloud = async () => {
+    if (!online) {
+      toast({ title: "لا يوجد اتصال", description: "يرجى الاتصال بالإنترنت أولاً", variant: "destructive" });
+      return;
+    }
+    setSyncing(true);
+    const success = await syncFromCloud();
+    if (success) {
+      await loadData();
+      toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
+    } else {
+      toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
+    }
+    setSyncing(false);
   };
 
   // حساب الترتيب - محلياً فقط بدون حفظ تلقائي
@@ -292,8 +330,22 @@ const Index = () => {
               </Button>
             </Link>
 
-            <div className="mr-auto text-sm text-muted-foreground">
-              عدد الطالبات: <span className="font-bold text-foreground">{students.length}</span>
+            <Button
+              onClick={handleSyncFromCloud}
+              disabled={syncing || !online}
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              مزامنة
+            </Button>
+
+            <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                {online ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-destructive" />}
+                {online ? 'متصل' : 'غير متصل'}
+              </span>
+              <span>عدد الطالبات: <span className="font-bold text-foreground">{students.length}</span></span>
             </div>
           </div>
         </div>
