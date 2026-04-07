@@ -81,11 +81,17 @@ const Index = () => {
       }));
 
       setDirtyMap({});
+
+      // Sync to cloud
+      const synced = await syncToCloud();
+
       await loadData();
 
       toast({
         title: "تم الحفظ",
-        description: `تم حفظ بيانات ${entries.length} طالبة بنجاح`,
+        description: synced
+          ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
+          : `تم الحفظ محلياً (${entries.length} طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
       });
     } catch (error) {
       console.error('Save error:', error);
