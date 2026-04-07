@@ -185,6 +185,22 @@ const Index = () => {
     window.print();
   };
 
+  const handleSyncFromCloud = async () => {
+    if (!online) {
+      toast({ title: "لا يوجد اتصال", description: "يرجى الاتصال بالإنترنت أولاً", variant: "destructive" });
+      return;
+    }
+    setSyncing(true);
+    const success = await syncFromCloud();
+    if (success) {
+      await loadData();
+      toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
+    } else {
+      toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
+    }
+    setSyncing(false);
+  };
+
   // حساب الترتيب - محلياً فقط بدون حفظ تلقائي
   useEffect(() => {
     const sortedStudents = [...students]
