@@ -122,3 +122,17 @@ All colors MUST be HSL.
   }
 }
 
+/* Force landscape on mobile for main app pages */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+  .force-landscape {
+    transform: rotate(-90deg);
+    transform-origin: top left;
+    width: 100vh;
+    height: 100vw;
+    position: fixed;
+    top: 0;
+    left: 100vw;
+    overflow: auto;
+  }
+}
+

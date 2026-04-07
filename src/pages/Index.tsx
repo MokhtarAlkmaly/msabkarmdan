@@ -197,7 +197,7 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background force-landscape" dir="rtl">
       <InstallPrompt />
       
       <header className="bg-primary text-primary-foreground py-6 px-4 print:py-4">
