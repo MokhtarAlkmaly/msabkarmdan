@@ -37,11 +37,25 @@ const Index = () => {
   const [currentYear, setCurrentYear] = useState<string>("1447");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
   const isDirty = Object.keys(dirtyMap).length > 0;
+
+  // Track online/offline status
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
