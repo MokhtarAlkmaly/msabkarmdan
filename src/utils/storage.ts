@@ -75,6 +75,7 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
       .maybeSingle();
     await setCachedSetting('active_year', settingsData?.active_year || '1447');
 
+    onProgress?.(4, 4, 'تمت المزامنة!');
     await setLastSyncTime();
     return true;
   } catch (err) {
