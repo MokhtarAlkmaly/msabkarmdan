@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Upload, Download, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
@@ -21,6 +22,8 @@ interface Props {
 export const ImportExport = ({ onDataImported }: Props) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, label: '' });
 
   const handleExport = async () => {
     const students = await loadGlobalStudents();
@@ -86,13 +89,18 @@ export const ImportExport = ({ onDataImported }: Props) => {
           return;
         }
 
+        setImporting(true);
         let importedCount = 0;
         let updatedCount = 0;
         const existingStudents = await loadGlobalStudents();
+        const totalRows = (jsonData as any[]).filter(r => r['الاسم']?.toString().trim()).length;
 
+        let rowIndex = 0;
         for (const row of jsonData as any[]) {
           const name = row['الاسم']?.toString().trim();
           if (!name) continue;
+          rowIndex++;
+          setImportProgress({ current: rowIndex, total: totalRows, label: `استيراد: ${name}` });
 
           let student = existingStudents.find(s => s.name === name);
           let studentId: number;
@@ -127,10 +135,14 @@ export const ImportExport = ({ onDataImported }: Props) => {
           }
         }
 
+        setImporting(false);
+        setImportProgress({ current: 0, total: 0, label: '' });
         onDataImported();
         toast({ title: "تم الاستيراد بنجاح", description: `تم استيراد ${importedCount} طالبة جديدة وتحديث ${updatedCount} طالبة` });
       } catch (error) {
         console.error('Error importing file:', error);
+        setImporting(false);
+        setImportProgress({ current: 0, total: 0, label: '' });
         toast({ title: "خطأ في الاستيراد", description: "تأكد من صحة تنسيق ملف Excel", variant: "destructive" });
       }
     };
