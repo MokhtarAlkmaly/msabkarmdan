@@ -118,6 +118,7 @@ const Index = () => {
       });
     } finally {
       setSaving(false);
+      setSyncProgress({ current: 0, total: 0, label: '' });
     }
   };
 
