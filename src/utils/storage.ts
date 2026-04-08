@@ -29,7 +29,7 @@ supabase.auth.onAuthStateChange(() => {
 const isOnline = () => navigator.onLine;
 
 // ===== Initial sync: download all data from cloud to local =====
-export const syncFromCloud = async (): Promise<boolean> => {
+export const syncFromCloud = async (onProgress?: (current: number, total: number, stage: string) => void): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId || !isOnline()) return false;
 
@@ -263,7 +263,7 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
 };
 
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
-export const syncToCloud = async (): Promise<boolean> => {
+export const syncToCloud = async (onProgress?: (current: number, total: number, stage: string) => void): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
