@@ -283,6 +283,16 @@ const Index = () => {
         <NotificationSystem students={students} currentYear={currentYear} />
         <ImportExport onDataImported={loadData} />
 
+        {(saving || syncing) && syncProgress.total > 0 && (
+          <div className="bg-card rounded-lg border border-primary/30 p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="font-medium">{syncProgress.label}</span>
+              <span>{syncProgress.current} / {syncProgress.total}</span>
+            </div>
+            <Progress value={(syncProgress.current / syncProgress.total) * 100} className="h-2" />
+          </div>
+        )}
+
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-md border-2 border-primary">
