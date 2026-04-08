@@ -277,102 +277,81 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
     const students = await getCachedStudents();
     const allHistory = await getCachedHifzHistory();
     const allYearData = await getCachedYearData();
-    const totalSteps = students.length + 3; // students + history + yearData + finalize
+    const totalSteps = 6;
 
     onProgress?.(0, totalSteps, 'جارٍ تجهيز البيانات...');
 
-    // 1. Sync students
-    const { data: cloudStudents } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', userId);
+    // 1. Delete all existing cloud data for this user (clean slate approach)
+    onProgress?.(1, totalSteps, 'تنظيف البيانات القديمة...');
+    await Promise.all([
+      supabase.from('hifz_history').delete().eq('user_id', userId),
+      supabase.from('year_data').delete().eq('user_id', userId),
+    ]);
+    await supabase.from('students').delete().eq('user_id', userId);
 
-    const localIds = new Set(students.map(s => s.id));
-    const cloudIds = (cloudStudents || []).map(s => s.id);
-    
-    const toDelete = cloudIds.filter(id => !localIds.has(id));
-    if (toDelete.length > 0) {
-      await supabase.from('students').delete().eq('user_id', userId).in('id', toDelete);
-    }
+    // 2. Insert all students in batches
+    onProgress?.(2, totalSteps, `إدراج ${students.length} طالبة...`);
+    const idMap = new Map<number, number>(); // oldId -> newId
 
-    if (students.length > 0) {
-      for (let idx = 0; idx < students.length; idx++) {
-        const s = students[idx];
-        onProgress?.(idx + 1, totalSteps, `مزامنة طالبة ${idx + 1} من ${students.length}...`);
-        
-        const { data: existing } = await supabase
-          .from('students')
-          .select('id')
-          .eq('id', s.id)
-          .eq('user_id', userId)
-          .maybeSingle();
+    for (let i = 0; i < students.length; i += 50) {
+      const batch = students.slice(i, i + 50);
+      const { data: inserted, error } = await supabase.from('students')
+        .insert(batch.map(s => ({ name: s.name, teacher: s.teacher, user_id: userId })))
+        .select('id, name');
 
-        if (existing) {
-          await supabase.from('students')
-            .update({ name: s.name, teacher: s.teacher })
-            .eq('id', s.id)
-            .eq('user_id', userId);
-        } else {
-          const { data: newStudent } = await supabase.from('students')
-            .insert({ name: s.name, teacher: s.teacher, user_id: userId })
-            .select('id')
-            .single();
-          
-          if (newStudent) {
-            const oldId = s.id;
-            const newId = newStudent.id;
-            for (const h of allHistory.filter(r => r.student_id === oldId)) {
-              h.student_id = newId;
-            }
-            for (const y of allYearData.filter(r => r.student_id === oldId)) {
-              y.student_id = newId;
-            }
-            s.id = newId;
-          }
+      if (error) {
+        console.error('Batch insert error:', error);
+        continue;
+      }
+
+      if (inserted) {
+        // Map old IDs to new IDs by matching names in order
+        for (let j = 0; j < batch.length && j < inserted.length; j++) {
+          idMap.set(batch[j].id, inserted[j].id);
         }
       }
+
+      onProgress?.(2, totalSteps, `إدراج ${Math.min(i + 50, students.length)} / ${students.length} طالبة...`);
     }
 
-    // 2. Sync hifz history
-    onProgress?.(students.length + 1, totalSteps, 'مزامنة سجل الحفظ...');
-    await supabase.from('hifz_history').delete().eq('user_id', userId);
+    // 3. Insert hifz history with remapped IDs
+    onProgress?.(3, totalSteps, 'مزامنة سجل الحفظ...');
     if (allHistory.length > 0) {
-      const historyRows = allHistory.map(h => ({
-        student_id: h.student_id,
-        user_id: userId,
-        year_key: h.year_key,
-        value: h.value || '0',
-      }));
+      const historyRows = allHistory
+        .map(h => ({
+          student_id: idMap.get(h.student_id) ?? h.student_id,
+          user_id: userId,
+          year_key: h.year_key,
+          value: h.value || '0',
+        }))
+        .filter(h => idMap.has(h.student_id) || students.some(s => idMap.get(s.id) === h.student_id));
+
       for (let i = 0; i < historyRows.length; i += 500) {
-        await supabase.from('hifz_history').upsert(
-          historyRows.slice(i, i + 500),
-          { onConflict: 'student_id,year_key' }
-        );
+        await supabase.from('hifz_history').insert(historyRows.slice(i, i + 500));
       }
     }
 
-    // 3. Sync year data
-    onProgress?.(students.length + 2, totalSteps, 'مزامنة بيانات السنوات...');
-    await supabase.from('year_data').delete().eq('user_id', userId);
+    // 4. Insert year data with remapped IDs
+    onProgress?.(4, totalSteps, 'مزامنة بيانات السنوات...');
     if (allYearData.length > 0) {
       const yearRows = allYearData.map(r => ({
-        student_id: r.student_id, user_id: userId, year: r.year,
+        student_id: idMap.get(r.student_id) ?? r.student_id,
+        user_id: userId, year: r.year,
         base_hifz: r.base_hifz, total_hifz: r.total_hifz, parts: r.parts,
         annual: r.annual, recitation: r.recitation, memorization: r.memorization,
         total: r.total, grade: r.grade, prize: r.prize,
         status_prize: r.status_prize, rank: r.rank, teacher: r.teacher || '',
       }));
       for (let i = 0; i < yearRows.length; i += 500) {
-        await supabase.from('year_data').upsert(
-          yearRows.slice(i, i + 500),
-          { onConflict: 'student_id,year' }
-        );
+        await supabase.from('year_data').insert(yearRows.slice(i, i + 500));
       }
     }
 
-    // Re-sync from cloud
-    onProgress?.(totalSteps, totalSteps, 'تمت المزامنة بنجاح!');
+    // 5. Re-sync from cloud to update local cache with real IDs
+    onProgress?.(5, totalSteps, 'تحديث الذاكرة المحلية...');
     await syncFromCloud();
+    
+    onProgress?.(totalSteps, totalSteps, 'تمت المزامنة بنجاح!');
     await setLastSyncTime();
     return true;
   } catch (err) {
