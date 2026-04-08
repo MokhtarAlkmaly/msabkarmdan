@@ -99,7 +99,7 @@ const Index = () => {
       setDirtyMap({});
 
       // Sync to cloud
-      const synced = await syncToCloud();
+      const synced = await syncToCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
 
       await loadData();
 
