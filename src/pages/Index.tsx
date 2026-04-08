@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompetitionTable } from "@/components/CompetitionTable";
@@ -40,6 +41,7 @@ const Index = () => {
   const [syncing, setSyncing] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, label: '' });
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
