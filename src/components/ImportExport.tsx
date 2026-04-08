@@ -178,7 +178,17 @@ export const ImportExport = ({ onDataImported }: Props) => {
         {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
 
-      {isOpen && (
+      {importing && (
+        <div className="px-3 pb-3 space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{importProgress.label}</span>
+            <span>{importProgress.current} / {importProgress.total}</span>
+          </div>
+          <Progress value={importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0} className="h-2" />
+        </div>
+      )}
+
+      {isOpen && !importing && (
         <div className="px-3 pb-3 space-y-3">
           <div className="grid grid-cols-3 gap-2">
             <Button onClick={downloadTemplate} variant="outline" size="sm" className="gap-1 text-xs">
