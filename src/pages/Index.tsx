@@ -194,7 +194,7 @@ const Index = () => {
       return;
     }
     setSyncing(true);
-    const success = await syncFromCloud();
+    const success = await syncFromCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
     if (success) {
       await loadData();
       toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
@@ -202,6 +202,7 @@ const Index = () => {
       toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
     }
     setSyncing(false);
+    setSyncProgress({ current: 0, total: 0, label: '' });
   };
 
   // حساب الترتيب - محلياً فقط بدون حفظ تلقائي
