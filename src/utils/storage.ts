@@ -29,11 +29,12 @@ supabase.auth.onAuthStateChange(() => {
 const isOnline = () => navigator.onLine;
 
 // ===== Initial sync: download all data from cloud to local =====
-export const syncFromCloud = async (): Promise<boolean> => {
+export const syncFromCloud = async (onProgress?: (current: number, total: number, stage: string) => void): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId || !isOnline()) return false;
 
   try {
+    onProgress?.(0, 4, 'جارٍ تحميل الطالبات...');
     const [studentsRes, historyRes, yearDataRes] = await Promise.all([
       supabase.from('students').select('*').eq('user_id', userId).order('id'),
       supabase.from('hifz_history').select('*').eq('user_id', userId),
@@ -42,16 +43,19 @@ export const syncFromCloud = async (): Promise<boolean> => {
 
     if (studentsRes.error) throw studentsRes.error;
 
+    onProgress?.(1, 4, 'جارٍ حفظ الطالبات محلياً...');
     // Cache students
     await cacheStudents(
       (studentsRes.data || []).map(s => ({ id: s.id, name: s.name, teacher: s.teacher, user_id: s.user_id }))
     );
 
+    onProgress?.(2, 4, 'جارٍ حفظ سجل الحفظ...');
     // Cache hifz history
     await cacheHifzHistory(
       (historyRes.data || []).map(r => ({ student_id: r.student_id, year_key: r.year_key, value: r.value }))
     );
 
+    onProgress?.(3, 4, 'جارٍ حفظ بيانات السنوات...');
     // Cache year data (all years)
     await cacheYearData(
       (yearDataRes.data || []).map(r => ({
@@ -71,6 +75,7 @@ export const syncFromCloud = async (): Promise<boolean> => {
       .maybeSingle();
     await setCachedSetting('active_year', settingsData?.active_year || '1447');
 
+    onProgress?.(4, 4, 'تمت المزامنة!');
     await setLastSyncTime();
     return true;
   } catch (err) {
@@ -263,7 +268,7 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
 };
 
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
-export const syncToCloud = async (): Promise<boolean> => {
+export const syncToCloud = async (onProgress?: (current: number, total: number, stage: string) => void): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
@@ -272,9 +277,11 @@ export const syncToCloud = async (): Promise<boolean> => {
     const students = await getCachedStudents();
     const allHistory = await getCachedHifzHistory();
     const allYearData = await getCachedYearData();
+    const totalSteps = students.length + 3; // students + history + yearData + finalize
 
-    // 1. Sync students - delete all and re-insert
-    // First get existing cloud students to find ones to delete
+    onProgress?.(0, totalSteps, 'جارٍ تجهيز البيانات...');
+
+    // 1. Sync students
     const { data: cloudStudents } = await supabase
       .from('students')
       .select('id')
@@ -283,17 +290,16 @@ export const syncToCloud = async (): Promise<boolean> => {
     const localIds = new Set(students.map(s => s.id));
     const cloudIds = (cloudStudents || []).map(s => s.id);
     
-    // Delete students that are in cloud but not local
     const toDelete = cloudIds.filter(id => !localIds.has(id));
     if (toDelete.length > 0) {
       await supabase.from('students').delete().eq('user_id', userId).in('id', toDelete);
     }
 
-    // Upsert all local students
     if (students.length > 0) {
-      // For students with temp IDs (not in cloud), we need to insert them
-      // For existing ones, update
-      for (const s of students) {
+      for (let idx = 0; idx < students.length; idx++) {
+        const s = students[idx];
+        onProgress?.(idx + 1, totalSteps, `مزامنة طالبة ${idx + 1} من ${students.length}...`);
+        
         const { data: existing } = await supabase
           .from('students')
           .select('id')
@@ -313,15 +319,11 @@ export const syncToCloud = async (): Promise<boolean> => {
             .single();
           
           if (newStudent) {
-            // Update local cache and related data with new ID
             const oldId = s.id;
             const newId = newStudent.id;
-            
-            // Update history references
             for (const h of allHistory.filter(r => r.student_id === oldId)) {
               h.student_id = newId;
             }
-            // Update year data references
             for (const y of allYearData.filter(r => r.student_id === oldId)) {
               y.student_id = newId;
             }
@@ -332,7 +334,7 @@ export const syncToCloud = async (): Promise<boolean> => {
     }
 
     // 2. Sync hifz history
-    // Delete all and re-insert
+    onProgress?.(students.length + 1, totalSteps, 'مزامنة سجل الحفظ...');
     await supabase.from('hifz_history').delete().eq('user_id', userId);
     if (allHistory.length > 0) {
       const historyRows = allHistory.map(h => ({
@@ -341,7 +343,6 @@ export const syncToCloud = async (): Promise<boolean> => {
         year_key: h.year_key,
         value: h.value || '0',
       }));
-      // Batch in chunks of 500
       for (let i = 0; i < historyRows.length; i += 500) {
         await supabase.from('hifz_history').upsert(
           historyRows.slice(i, i + 500),
@@ -351,6 +352,7 @@ export const syncToCloud = async (): Promise<boolean> => {
     }
 
     // 3. Sync year data
+    onProgress?.(students.length + 2, totalSteps, 'مزامنة بيانات السنوات...');
     await supabase.from('year_data').delete().eq('user_id', userId);
     if (allYearData.length > 0) {
       const yearRows = allYearData.map(r => ({
@@ -368,7 +370,8 @@ export const syncToCloud = async (): Promise<boolean> => {
       }
     }
 
-    // Re-sync from cloud to get correct IDs
+    // Re-sync from cloud
+    onProgress?.(totalSteps, totalSteps, 'تمت المزامنة بنجاح!');
     await syncFromCloud();
     await setLastSyncTime();
     return true;

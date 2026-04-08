@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompetitionTable } from "@/components/CompetitionTable";
@@ -40,6 +41,7 @@ const Index = () => {
   const [syncing, setSyncing] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, label: '' });
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -97,7 +99,7 @@ const Index = () => {
       setDirtyMap({});
 
       // Sync to cloud
-      const synced = await syncToCloud();
+      const synced = await syncToCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
 
       await loadData();
 
@@ -116,6 +118,7 @@ const Index = () => {
       });
     } finally {
       setSaving(false);
+      setSyncProgress({ current: 0, total: 0, label: '' });
     }
   };
 
@@ -191,7 +194,7 @@ const Index = () => {
       return;
     }
     setSyncing(true);
-    const success = await syncFromCloud();
+    const success = await syncFromCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
     if (success) {
       await loadData();
       toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
@@ -199,6 +202,7 @@ const Index = () => {
       toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
     }
     setSyncing(false);
+    setSyncProgress({ current: 0, total: 0, label: '' });
   };
 
   // حساب الترتيب - محلياً فقط بدون حفظ تلقائي
@@ -278,6 +282,16 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6 print:hidden space-y-4">
         <NotificationSystem students={students} currentYear={currentYear} />
         <ImportExport onDataImported={loadData} />
+
+        {(saving || syncing) && syncProgress.total > 0 && (
+          <div className="bg-card rounded-lg border border-primary/30 p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="font-medium">{syncProgress.label}</span>
+              <span>{syncProgress.current} / {syncProgress.total}</span>
+            </div>
+            <Progress value={(syncProgress.current / syncProgress.total) * 100} className="h-2" />
+          </div>
+        )}
 
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
           <div className="flex flex-wrap gap-3 items-center">
