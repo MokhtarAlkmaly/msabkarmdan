@@ -34,6 +34,7 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
   if (!userId || !isOnline()) return false;
 
   try {
+    onProgress?.(0, 4, 'جارٍ تحميل الطالبات...');
     const [studentsRes, historyRes, yearDataRes] = await Promise.all([
       supabase.from('students').select('*').eq('user_id', userId).order('id'),
       supabase.from('hifz_history').select('*').eq('user_id', userId),
@@ -42,16 +43,19 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
 
     if (studentsRes.error) throw studentsRes.error;
 
+    onProgress?.(1, 4, 'جارٍ حفظ الطالبات محلياً...');
     // Cache students
     await cacheStudents(
       (studentsRes.data || []).map(s => ({ id: s.id, name: s.name, teacher: s.teacher, user_id: s.user_id }))
     );
 
+    onProgress?.(2, 4, 'جارٍ حفظ سجل الحفظ...');
     // Cache hifz history
     await cacheHifzHistory(
       (historyRes.data || []).map(r => ({ student_id: r.student_id, year_key: r.year_key, value: r.value }))
     );
 
+    onProgress?.(3, 4, 'جارٍ حفظ بيانات السنوات...');
     // Cache year data (all years)
     await cacheYearData(
       (yearDataRes.data || []).map(r => ({
