@@ -8,25 +8,83 @@ import {
   setLastSyncTime, isCachePopulated, clearAllCache,
   CachedStudent, CachedHifzRow, CachedYearData,
 } from "./localDB";
+import { writeJsonFile, readJsonFile } from "./fileStorage";
 
-// ===== Helper: get cached user =====
+// ===== Helper: get cached user (optional - may be null for local-only mode) =====
 let cachedUserId: string | null = null;
 
 const getUserId = async (): Promise<string | null> => {
   if (cachedUserId) return cachedUserId;
-  const { data: { user } } = await supabase.auth.getUser();
-  cachedUserId = user?.id || null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    cachedUserId = user?.id || null;
+  } catch {
+    cachedUserId = null;
+  }
   return cachedUserId;
+};
+
+// Use a fixed local user ID when not logged in
+const getLocalUserId = () => 'local-user';
+
+const getEffectiveUserId = async (): Promise<string> => {
+  const cloudId = await getUserId();
+  return cloudId || getLocalUserId();
 };
 
 supabase.auth.onAuthStateChange(() => {
   cachedUserId = null;
-  // Clear local cache on auth change (logout/login)
-  clearAllCache().catch(console.error);
 });
 
 // ===== Online check =====
 const isOnline = () => navigator.onLine;
+
+const isLoggedIn = async () => {
+  const userId = await getUserId();
+  return userId !== null;
+};
+
+// ===== Persist to filesystem (backup) =====
+const persistToFilesystem = async () => {
+  try {
+    const students = await getCachedStudents();
+    const history = await getCachedHifzHistory();
+    const yearData = await getCachedYearData();
+    const activeYear = await getCachedSetting<string>('active_year');
+
+    await writeJsonFile('students', students);
+    await writeJsonFile('hifz_history', history);
+    await writeJsonFile('year_data', yearData);
+    await writeJsonFile('settings', { active_year: activeYear || '1447' });
+  } catch (err) {
+    console.error('Filesystem persist failed:', err);
+  }
+};
+
+// ===== Restore from filesystem if IndexedDB is empty =====
+const restoreFromFilesystem = async (): Promise<boolean> => {
+  try {
+    const students = await readJsonFile<CachedStudent[]>('students');
+    if (!students || students.length === 0) return false;
+
+    await cacheStudents(students);
+
+    const history = await readJsonFile<CachedHifzRow[]>('hifz_history');
+    if (history) await cacheHifzHistory(history);
+
+    const yearData = await readJsonFile<CachedYearData[]>('year_data');
+    if (yearData) await cacheYearData(yearData);
+
+    const settings = await readJsonFile<{ active_year: string }>('settings');
+    if (settings) await setCachedSetting('active_year', settings.active_year);
+
+    await setLastSyncTime();
+    return true;
+  } catch (err) {
+    console.error('Filesystem restore failed:', err);
+    return false;
+  }
+};
 
 // ===== Initial sync: download all data from cloud to local =====
 export const syncFromCloud = async (onProgress?: (current: number, total: number, stage: string) => void): Promise<boolean> => {
@@ -44,19 +102,16 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
     if (studentsRes.error) throw studentsRes.error;
 
     onProgress?.(1, 4, 'جارٍ حفظ الطالبات محلياً...');
-    // Cache students
     await cacheStudents(
       (studentsRes.data || []).map(s => ({ id: s.id, name: s.name, teacher: s.teacher, user_id: s.user_id }))
     );
 
     onProgress?.(2, 4, 'جارٍ حفظ سجل الحفظ...');
-    // Cache hifz history
     await cacheHifzHistory(
       (historyRes.data || []).map(r => ({ student_id: r.student_id, year_key: r.year_key, value: r.value }))
     );
 
     onProgress?.(3, 4, 'جارٍ حفظ بيانات السنوات...');
-    // Cache year data (all years)
     await cacheYearData(
       (yearDataRes.data || []).map(r => ({
         student_id: r.student_id, year: r.year,
@@ -67,7 +122,6 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
       }))
     );
 
-    // Cache active year
     const { data: settingsData } = await supabase
       .from('user_settings')
       .select('active_year')
@@ -77,6 +131,7 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
 
     onProgress?.(4, 4, 'تمت المزامنة!');
     await setLastSyncTime();
+    await persistToFilesystem();
     return true;
   } catch (err) {
     console.error('Sync from cloud failed:', err);
@@ -88,7 +143,15 @@ export const syncFromCloud = async (onProgress?: (current: number, total: number
 export const loadAllStudentsWithData = async (currentYear: string): Promise<Student[]> => {
   const hasCache = await isCachePopulated();
   if (!hasCache) {
-    await syncFromCloud();
+    // Try filesystem first
+    const restored = await restoreFromFilesystem();
+    if (!restored) {
+      // Try cloud if logged in
+      const loggedIn = await isLoggedIn();
+      if (loggedIn && isOnline()) {
+        await syncFromCloud();
+      }
+    }
   }
 
   const students = await getCachedStudents();
@@ -135,14 +198,12 @@ export const loadGlobalStudents = async (): Promise<Student[]> => {
 
 // ===== Save to LOCAL cache only (not cloud) =====
 export const saveStudent = async (student: { id?: number; name: string; teacher: string }): Promise<number | null> => {
-  const userId = await getUserId();
-  if (!userId) return null;
+  const userId = await getEffectiveUserId();
 
   if (student.id) {
     await putCachedStudent({ id: student.id, name: student.name, teacher: student.teacher, user_id: userId });
     return student.id;
   } else {
-    // Generate a temporary ID for new students
     const existing = await getCachedStudents();
     const maxId = existing.reduce((max, s) => Math.max(max, s.id), 0);
     const newId = maxId + 1;
@@ -153,7 +214,6 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
 
 export const deleteStudent = async (id: number) => {
   await deleteCachedStudent(id);
-  // Also delete related cache
   const allHistory = await getCachedHifzHistory();
   const allYearData = await getCachedYearData();
   for (const row of allHistory.filter(r => r.student_id === id)) {
@@ -171,6 +231,10 @@ export const deleteAllStudents = async () => {
   await clearStore('students');
   await clearStore('hifz_history');
   await clearStore('year_data');
+  // Also clear filesystem
+  await writeJsonFile('students', []);
+  await writeJsonFile('hifz_history', []);
+  await writeJsonFile('year_data', []);
 };
 
 export const saveHifzHistory = async (studentId: number, history: HifzHistory) => {
@@ -224,24 +288,35 @@ export const getActiveYear = async (): Promise<string> => {
     return year || '1447';
   }
 
-  // Fallback to cloud
+  // Try filesystem
+  const settings = await readJsonFile<{ active_year: string }>('settings');
+  if (settings?.active_year) {
+    await setCachedSetting('active_year', settings.active_year);
+    return settings.active_year;
+  }
+
+  // Try cloud if logged in
   const userId = await getUserId();
-  if (!userId || !isOnline()) return '1447';
+  if (userId && isOnline()) {
+    const { data } = await supabase
+      .from('user_settings')
+      .select('active_year')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  const { data } = await supabase
-    .from('user_settings')
-    .select('active_year')
-    .eq('user_id', userId)
-    .maybeSingle();
+    const year = data?.active_year || '1447';
+    await setCachedSetting('active_year', year);
+    return year;
+  }
 
-  const year = data?.active_year || '1447';
-  await setCachedSetting('active_year', year);
-  return year;
+  return '1447';
 };
 
 export const setActiveYear = async (year: string) => {
   await setCachedSetting('active_year', year);
-  // Also save to cloud if online
+  await writeJsonFile('settings', { active_year: year });
+
+  // Also save to cloud if logged in
   const userId = await getUserId();
   if (userId && isOnline()) {
     await supabase
@@ -267,7 +342,12 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
   }
 };
 
-// ===== SYNC TO CLOUD: called when user clicks "Save" =====
+// ===== Save locally + persist to filesystem =====
+export const saveAndPersist = async () => {
+  await persistToFilesystem();
+};
+
+// ===== SYNC TO CLOUD: called when user clicks cloud sync =====
 export const syncToCloud = async (onProgress?: (current: number, total: number, stage: string) => void): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
@@ -281,7 +361,6 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
 
     onProgress?.(0, totalSteps, 'جارٍ تجهيز البيانات...');
 
-    // 1. Delete all existing cloud data for this user (clean slate approach)
     onProgress?.(1, totalSteps, 'تنظيف البيانات القديمة...');
     await Promise.all([
       supabase.from('hifz_history').delete().eq('user_id', userId),
@@ -289,9 +368,8 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
     ]);
     await supabase.from('students').delete().eq('user_id', userId);
 
-    // 2. Insert all students in batches
     onProgress?.(2, totalSteps, `إدراج ${students.length} طالبة...`);
-    const idMap = new Map<number, number>(); // oldId -> newId
+    const idMap = new Map<number, number>();
 
     for (let i = 0; i < students.length; i += 50) {
       const batch = students.slice(i, i + 50);
@@ -305,7 +383,6 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
       }
 
       if (inserted) {
-        // Map old IDs to new IDs by matching names in order
         for (let j = 0; j < batch.length && j < inserted.length; j++) {
           idMap.set(batch[j].id, inserted[j].id);
         }
@@ -314,7 +391,6 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
       onProgress?.(2, totalSteps, `إدراج ${Math.min(i + 50, students.length)} / ${students.length} طالبة...`);
     }
 
-    // 3. Insert hifz history with remapped IDs
     onProgress?.(3, totalSteps, 'مزامنة سجل الحفظ...');
     if (allHistory.length > 0) {
       const historyRows = allHistory
@@ -331,7 +407,6 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
       }
     }
 
-    // 4. Insert year data with remapped IDs
     onProgress?.(4, totalSteps, 'مزامنة بيانات السنوات...');
     if (allYearData.length > 0) {
       const yearRows = allYearData.map(r => ({
@@ -347,10 +422,9 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
       }
     }
 
-    // 5. Re-sync from cloud to update local cache with real IDs
     onProgress?.(5, totalSteps, 'تحديث الذاكرة المحلية...');
     await syncFromCloud();
-    
+
     onProgress?.(totalSteps, totalSteps, 'تمت المزامنة بنجاح!');
     await setLastSyncTime();
     return true;
@@ -360,7 +434,6 @@ export const syncToCloud = async (onProgress?: (current: number, total: number, 
   }
 };
 
-// Legacy sync-compatible wrappers (for ImportExport component)
 export const saveGlobalStudents = async (students: Student[]) => {
   // handled per-student via saveStudent
 };
