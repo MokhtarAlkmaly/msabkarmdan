@@ -22,6 +22,7 @@ import {
   migrateYearData,
   syncToCloud,
   syncFromCloud,
+  saveAndPersist,
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
