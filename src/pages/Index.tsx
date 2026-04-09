@@ -7,7 +7,7 @@ import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw, Cloud, CloudUpload, LogIn } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
