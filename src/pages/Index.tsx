@@ -191,11 +191,36 @@ const Index = () => {
       toast({ title: "لا يوجد اتصال", description: "يرجى الاتصال بالإنترنت أولاً", variant: "destructive" });
       return;
     }
+    if (!user) {
+      toast({ title: "غير مسجل", description: "سجّل دخولك أولاً للمزامنة السحابية", variant: "destructive" });
+      return;
+    }
     setSyncing(true);
     const success = await syncFromCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
     if (success) {
       await loadData();
       toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
+    } else {
+      toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
+    }
+    setSyncing(false);
+    setSyncProgress({ current: 0, total: 0, label: '' });
+  };
+
+  const handleSyncToCloud = async () => {
+    if (!online) {
+      toast({ title: "لا يوجد اتصال", description: "يرجى الاتصال بالإنترنت أولاً", variant: "destructive" });
+      return;
+    }
+    if (!user) {
+      toast({ title: "غير مسجل", description: "سجّل دخولك أولاً للمزامنة السحابية", variant: "destructive" });
+      return;
+    }
+    setSyncing(true);
+    const success = await syncToCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
+    if (success) {
+      await loadData();
+      toast({ title: "تمت المزامنة", description: "تم رفع البيانات إلى السحابة بنجاح" });
     } else {
       toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
     }
