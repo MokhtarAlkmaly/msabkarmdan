@@ -99,16 +99,14 @@ const Index = () => {
 
       setDirtyMap({});
 
-      // Sync to cloud
-      const synced = await syncToCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
+      // Persist to filesystem (local backup)
+      await saveAndPersist();
 
       await loadData();
 
       toast({
         title: "تم الحفظ",
-        description: synced
-          ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
-          : `تم الحفظ محلياً (${entries.length} طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
+        description: `تم حفظ بيانات ${entries.length} طالبة محلياً`,
       });
     } catch (error) {
       console.error('Save error:', error);
@@ -119,7 +117,6 @@ const Index = () => {
       });
     } finally {
       setSaving(false);
-      setSyncProgress({ current: 0, total: 0, label: '' });
     }
   };
 
