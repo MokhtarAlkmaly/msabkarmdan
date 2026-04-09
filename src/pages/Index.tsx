@@ -380,15 +380,29 @@ const Index = () => {
               </Button>
             </Link>
 
-            <Button
-              onClick={handleSyncFromCloud}
-              disabled={syncing || !online}
-              variant="outline"
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              مزامنة
-            </Button>
+            {user && (
+              <>
+                <Button
+                  onClick={handleSyncToCloud}
+                  disabled={syncing || !online}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <CloudUpload className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                  رفع للسحابة
+                </Button>
+
+                <Button
+                  onClick={handleSyncFromCloud}
+                  disabled={syncing || !online}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Cloud className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                  تحميل من السحابة
+                </Button>
+              </>
+            )}
 
             <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
