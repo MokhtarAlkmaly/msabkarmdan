@@ -288,15 +288,28 @@ const Index = () => {
               <div className="font-semibold">{dayName}</div>
               <div>{hijriDate}</div>
               <div>{currentDate}</div>
-              <Button
-                onClick={signOut}
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
-              >
-                <LogOut className="h-3 w-3" />
-                خروج
-              </Button>
+              {user ? (
+                <Button
+                  onClick={signOut}
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
+                >
+                  <LogOut className="h-3 w-3" />
+                  خروج
+                </Button>
+              ) : (
+                <Link to="/auth">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
+                  >
+                    <LogIn className="h-3 w-3" />
+                    تسجيل دخول
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
