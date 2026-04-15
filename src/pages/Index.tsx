@@ -7,7 +7,7 @@ import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw, Cloud, CloudUpload, LogIn } from "lucide-react";
+import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -22,7 +22,6 @@ import {
   migrateYearData,
   syncToCloud,
   syncFromCloud,
-  saveAndPersist,
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,14 +98,16 @@ const Index = () => {
 
       setDirtyMap({});
 
-      // Persist to filesystem (local backup)
-      await saveAndPersist();
+      // Sync to cloud
+      const synced = await syncToCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
 
       await loadData();
 
       toast({
         title: "تم الحفظ",
-        description: `تم حفظ بيانات ${entries.length} طالبة محلياً`,
+        description: synced
+          ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
+          : `تم الحفظ محلياً (${entries.length} طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
       });
     } catch (error) {
       console.error('Save error:', error);
@@ -117,6 +118,7 @@ const Index = () => {
       });
     } finally {
       setSaving(false);
+      setSyncProgress({ current: 0, total: 0, label: '' });
     }
   };
 
@@ -191,36 +193,11 @@ const Index = () => {
       toast({ title: "لا يوجد اتصال", description: "يرجى الاتصال بالإنترنت أولاً", variant: "destructive" });
       return;
     }
-    if (!user) {
-      toast({ title: "غير مسجل", description: "سجّل دخولك أولاً للمزامنة السحابية", variant: "destructive" });
-      return;
-    }
     setSyncing(true);
     const success = await syncFromCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
     if (success) {
       await loadData();
       toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
-    } else {
-      toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
-    }
-    setSyncing(false);
-    setSyncProgress({ current: 0, total: 0, label: '' });
-  };
-
-  const handleSyncToCloud = async () => {
-    if (!online) {
-      toast({ title: "لا يوجد اتصال", description: "يرجى الاتصال بالإنترنت أولاً", variant: "destructive" });
-      return;
-    }
-    if (!user) {
-      toast({ title: "غير مسجل", description: "سجّل دخولك أولاً للمزامنة السحابية", variant: "destructive" });
-      return;
-    }
-    setSyncing(true);
-    const success = await syncToCloud((c, t, l) => setSyncProgress({ current: c, total: t, label: l }));
-    if (success) {
-      await loadData();
-      toast({ title: "تمت المزامنة", description: "تم رفع البيانات إلى السحابة بنجاح" });
     } else {
       toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
     }
@@ -288,28 +265,15 @@ const Index = () => {
               <div className="font-semibold">{dayName}</div>
               <div>{hijriDate}</div>
               <div>{currentDate}</div>
-              {user ? (
-                <Button
-                  onClick={signOut}
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
-                >
-                  <LogOut className="h-3 w-3" />
-                  خروج
-                </Button>
-              ) : (
-                <Link to="/auth">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
-                  >
-                    <LogIn className="h-3 w-3" />
-                    تسجيل دخول
-                  </Button>
-                </Link>
-              )}
+              <Button
+                onClick={signOut}
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
+              >
+                <LogOut className="h-3 w-3" />
+                خروج
+              </Button>
             </div>
           </div>
         </div>
@@ -380,29 +344,15 @@ const Index = () => {
               </Button>
             </Link>
 
-            {user && (
-              <>
-                <Button
-                  onClick={handleSyncToCloud}
-                  disabled={syncing || !online}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <CloudUpload className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                  رفع للسحابة
-                </Button>
-
-                <Button
-                  onClick={handleSyncFromCloud}
-                  disabled={syncing || !online}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Cloud className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                  تحميل من السحابة
-                </Button>
-              </>
-            )}
+            <Button
+              onClick={handleSyncFromCloud}
+              disabled={syncing || !online}
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              مزامنة
+            </Button>
 
             <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
