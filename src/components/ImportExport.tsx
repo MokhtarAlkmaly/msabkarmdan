@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Download, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 import {
@@ -11,8 +11,10 @@ import {
   saveHifzHistory,
   loadYearData,
   saveYearData,
+  mergeDuplicateStudents,
 } from "@/utils/storage";
 import { Student } from "@/types/student";
+import { Progress } from "@/components/ui/progress";
 
 interface Props {
   onDataImported: () => void;
@@ -21,6 +23,8 @@ interface Props {
 export const ImportExport = ({ onDataImported }: Props) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
+  const [merging, setMerging] = useState(false);
 
   const handleExport = async () => {
     const students = await loadGlobalStudents();
@@ -88,19 +92,35 @@ export const ImportExport = ({ onDataImported }: Props) => {
 
         let importedCount = 0;
         let updatedCount = 0;
+        let skippedCount = 0;
         const existingStudents = await loadGlobalStudents();
+        const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ');
+        const seenInFile = new Set<string>();
 
-        for (const row of jsonData as any[]) {
+        setImportProgress({ current: 0, total: jsonData.length });
+
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i] as any;
           const name = row['الاسم']?.toString().trim();
-          if (!name) continue;
+          if (!name) { setImportProgress({ current: i + 1, total: jsonData.length }); continue; }
 
-          let student = existingStudents.find(s => s.name === name);
+          const nameKey = norm(name);
+          // Skip duplicates within same file
+          if (seenInFile.has(nameKey)) {
+            skippedCount++;
+            setImportProgress({ current: i + 1, total: jsonData.length });
+            continue;
+          }
+          seenInFile.add(nameKey);
+
+          let student = existingStudents.find(s => norm(s.name) === nameKey);
           let studentId: number;
 
           if (!student) {
             const newId = await saveStudent({ name, teacher: '' });
-            if (!newId) continue;
+            if (!newId) { setImportProgress({ current: i + 1, total: jsonData.length }); continue; }
             studentId = newId;
+            existingStudents.push({ id: newId, name, teacher: '' });
             importedCount++;
           } else {
             studentId = student.id;
@@ -125,13 +145,19 @@ export const ImportExport = ({ onDataImported }: Props) => {
             if (row[`حفظ_درجة_${year}`] !== undefined) { yearData.memorization = row[`حفظ_درجة_${year}`].toString(); hasData = true; }
             if (hasData) await saveYearData(year.toString(), studentId, yearData);
           }
+          setImportProgress({ current: i + 1, total: jsonData.length });
         }
 
         onDataImported();
-        toast({ title: "تم الاستيراد بنجاح", description: `تم استيراد ${importedCount} طالبة جديدة وتحديث ${updatedCount} طالبة` });
+        toast({
+          title: "تم الاستيراد بنجاح",
+          description: `جديدة: ${importedCount} | محدّثة: ${updatedCount}${skippedCount ? ` | مكررة (تم تجاهلها): ${skippedCount}` : ''}`,
+        });
       } catch (error) {
         console.error('Error importing file:', error);
         toast({ title: "خطأ في الاستيراد", description: "تأكد من صحة تنسيق ملف Excel", variant: "destructive" });
+      } finally {
+        setImportProgress(null);
       }
     };
     reader.readAsBinaryString(file);
@@ -151,6 +177,21 @@ export const ImportExport = ({ onDataImported }: Props) => {
     worksheet['!cols'] = Array(11).fill({ wch: 20 });
     XLSX.writeFile(workbook, 'قالب_استيراد_البيانات.xlsx');
     toast({ title: "تم تنزيل القالب", description: "يمكنك تعبئة البيانات في القالب ثم استيراده" });
+  };
+
+  const handleMergeDuplicates = async () => {
+    if (!confirm('سيتم دمج الطالبات المكررة بنفس الاسم في سجل واحد. هل تريد المتابعة؟')) return;
+    setMerging(true);
+    try {
+      const merged = await mergeDuplicateStudents();
+      onDataImported();
+      toast({
+        title: merged > 0 ? "تم الدمج" : "لا توجد مكررات",
+        description: merged > 0 ? `تم دمج ${merged} سجل مكرر. لا تنسَ الضغط على حفظ.` : 'لم يتم العثور على أسماء مكررة',
+      });
+    } finally {
+      setMerging(false);
+    }
   };
 
   return (
@@ -173,9 +214,9 @@ export const ImportExport = ({ onDataImported }: Props) => {
               <Download className="h-3 w-3" />
               تنزيل القالب
             </Button>
-            <Button variant="default" size="sm" className="gap-1 text-xs relative overflow-hidden">
+            <Button variant="default" size="sm" className="gap-1 text-xs relative overflow-hidden" disabled={!!importProgress}>
               <Upload className="h-3 w-3" />
-              <span>استيراد</span>
+              <span>{importProgress ? `${importProgress.current}/${importProgress.total}` : 'استيراد'}</span>
               <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="absolute inset-0 opacity-0 cursor-pointer" />
             </Button>
             <Button onClick={handleExport} variant="secondary" size="sm" className="gap-1 text-xs">
@@ -183,6 +224,18 @@ export const ImportExport = ({ onDataImported }: Props) => {
               تصدير
             </Button>
           </div>
+          {importProgress && (
+            <div className="space-y-1">
+              <Progress value={(importProgress.current / Math.max(importProgress.total, 1)) * 100} className="h-2" />
+              <p className="text-xs text-center text-muted-foreground">
+                جارٍ الاستيراد: {importProgress.current} من {importProgress.total}
+              </p>
+            </div>
+          )}
+          <Button onClick={handleMergeDuplicates} variant="outline" size="sm" className="w-full gap-1 text-xs" disabled={merging}>
+            <Users className="h-3 w-3" />
+            {merging ? 'جارٍ الدمج...' : 'دمج الأسماء المكررة'}
+          </Button>
           <p className="text-xs text-muted-foreground">📝 نزّل القالب، عبّئ البيانات (الاسم إلزامي)، ثم استورده.</p>
         </div>
       )}
