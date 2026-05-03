@@ -79,11 +79,19 @@ export const StudentReport = ({ student }: Props) => {
     const calcTotalPrize = data.reduce((sum, r) => sum + r.prize, 0);
     const calcTotalStatusPrize = data.reduce((sum, r) => sum + r.statusPrize, 0);
 
+    const esc = (s: unknown) =>
+      String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     const rows = data.map(r => `<tr>
       <td>${r.year}هـ</td><td>${r.baseHifz || '-'}</td><td>${r.parts || '-'}</td>
       <td>${r.totalHifz >= 30 ? 'خاتم ✨' : r.totalHifz || '-'}</td>
-      <td>${r.annual || '-'}</td><td>${r.recitation || '-'}</td><td>${r.memorization || '-'}</td>
-      <td>${r.totalScore || '-'}</td><td>${r.grade || '-'}</td>
+      <td>${esc(r.annual || '-')}</td><td>${esc(r.recitation || '-')}</td><td>${esc(r.memorization || '-')}</td>
+      <td>${r.totalScore || '-'}</td><td>${esc(r.grade || '-')}</td>
       <td class="${r.isActive ? 'active' : 'inactive'}">${r.isActive ? 'نشط' : 'منقطع'}</td>
       <td>${r.prize.toLocaleString()}</td><td>${r.statusPrize.toLocaleString()}</td>
     </tr>`).join('');
@@ -91,7 +99,7 @@ export const StudentReport = ({ student }: Props) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     printWindow.document.write(`
-      <html dir="rtl"><head><title>تقرير ${student.name}</title>
+      <html dir="rtl"><head><title>تقرير ${esc(student.name)}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; color: #1a3a2a; }
@@ -116,11 +124,11 @@ export const StudentReport = ({ student }: Props) => {
         <div class="header">
           <img src="${logo}" alt="الشعار" />
           <h1>مركز إنماء الأهلي الخيري</h1>
-          <h2>تقرير المسابقة الرمضانية - ${student.name}</h2>
+          <h2>تقرير المسابقة الرمضانية - ${esc(student.name)}</h2>
         </div>
         <div class="student-info">
-          <div><strong>الطالبة:</strong> ${student.name}</div>
-          <div><strong>المعلمة:</strong> ${student.teacher}</div>
+          <div><strong>الطالبة:</strong> ${esc(student.name)}</div>
+          <div><strong>المعلمة:</strong> ${esc(student.teacher)}</div>
         </div>
         <table>
           <thead><tr>
