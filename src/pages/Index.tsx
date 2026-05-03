@@ -24,6 +24,7 @@ import {
 } from "@/utils/storage";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Progress } from "@/components/ui/progress";
 
 interface DirtyData {
   name: string;
@@ -38,6 +39,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; label?: string } | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
   const { toast } = useToast();
@@ -96,8 +98,12 @@ const Index = () => {
 
       setDirtyMap({});
 
-      // Sync to cloud
-      const synced = await syncToCloud();
+      // Sync to cloud with progress
+      setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
+      const synced = await syncToCloud((current, total, label) =>
+        setSyncProgress({ current, total, label })
+      );
+      setSyncProgress(null);
 
       await loadData();
 
@@ -191,7 +197,11 @@ const Index = () => {
       return;
     }
     setSyncing(true);
-    const success = await syncFromCloud();
+    setSyncProgress({ current: 0, total: 4, label: 'بدء التنزيل' });
+    const success = await syncFromCloud((current, total, label) =>
+      setSyncProgress({ current, total, label })
+    );
+    setSyncProgress(null);
     if (success) {
       await loadData();
       toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
@@ -337,7 +347,7 @@ const Index = () => {
               className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              مزامنة
+              {syncProgress ? `${syncProgress.current}/${syncProgress.total}` : 'مزامنة'}
             </Button>
 
             <div className="mr-auto flex items-center gap-3 text-sm text-muted-foreground">
@@ -348,6 +358,14 @@ const Index = () => {
               <span>عدد الطالبات: <span className="font-bold text-foreground">{students.length}</span></span>
             </div>
           </div>
+          {syncProgress && (
+            <div className="mt-2 space-y-1">
+              <Progress value={(syncProgress.current / Math.max(syncProgress.total, 1)) * 100} className="h-2" />
+              <p className="text-xs text-center text-muted-foreground">
+                {syncProgress.label || 'جارٍ المزامنة'}: {syncProgress.current} / {syncProgress.total}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
