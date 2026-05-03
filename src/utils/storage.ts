@@ -267,7 +267,7 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
 };
 
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
-export const syncToCloud = async (): Promise<boolean> => {
+export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
@@ -276,6 +276,10 @@ export const syncToCloud = async (): Promise<boolean> => {
     const students = await getCachedStudents();
     const allHistory = await getCachedHifzHistory();
     const allYearData = await getCachedYearData();
+
+    const total = students.length + allHistory.length + allYearData.length + 1;
+    let done = 0;
+    const tick = (label?: string) => onProgress?.(++done, total, label);
 
     // 1. Sync students - delete all and re-insert
     // First get existing cloud students to find ones to delete
@@ -332,6 +336,7 @@ export const syncToCloud = async (): Promise<boolean> => {
             s.id = newId;
           }
         }
+        tick('رفع الطالبات');
       }
     }
 
@@ -347,10 +352,12 @@ export const syncToCloud = async (): Promise<boolean> => {
       }));
       // Batch in chunks of 500
       for (let i = 0; i < historyRows.length; i += 500) {
+        const chunk = historyRows.slice(i, i + 500);
         await supabase.from('hifz_history').upsert(
-          historyRows.slice(i, i + 500),
+          chunk,
           { onConflict: 'student_id,year_key' }
         );
+        for (let k = 0; k < chunk.length; k++) tick('رفع سجل الحفظ');
       }
     }
 
@@ -365,16 +372,19 @@ export const syncToCloud = async (): Promise<boolean> => {
         status_prize: r.status_prize, rank: r.rank, teacher: r.teacher || '',
       }));
       for (let i = 0; i < yearRows.length; i += 500) {
+        const chunk = yearRows.slice(i, i + 500);
         await supabase.from('year_data').upsert(
-          yearRows.slice(i, i + 500),
+          chunk,
           { onConflict: 'student_id,year' }
         );
+        for (let k = 0; k < chunk.length; k++) tick('رفع بيانات الأعوام');
       }
     }
 
     // Re-sync from cloud to get correct IDs
     await syncFromCloud();
     await setLastSyncTime();
+    tick('اكتمل');
     return true;
   } catch (err) {
     console.error('Sync to cloud failed:', err);
