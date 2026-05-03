@@ -29,11 +29,14 @@ supabase.auth.onAuthStateChange(() => {
 const isOnline = () => navigator.onLine;
 
 // ===== Initial sync: download all data from cloud to local =====
-export const syncFromCloud = async (): Promise<boolean> => {
+export type ProgressCb = (current: number, total: number, label?: string) => void;
+
+export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId || !isOnline()) return false;
 
   try {
+    onProgress?.(0, 4, 'تحميل الطالبات');
     const [studentsRes, historyRes, yearDataRes] = await Promise.all([
       supabase.from('students').select('*').eq('user_id', userId).order('id'),
       supabase.from('hifz_history').select('*').eq('user_id', userId),
@@ -42,17 +45,17 @@ export const syncFromCloud = async (): Promise<boolean> => {
 
     if (studentsRes.error) throw studentsRes.error;
 
-    // Cache students
+    onProgress?.(1, 4, 'حفظ الطالبات');
     await cacheStudents(
       (studentsRes.data || []).map(s => ({ id: s.id, name: s.name, teacher: s.teacher, user_id: s.user_id }))
     );
 
-    // Cache hifz history
+    onProgress?.(2, 4, 'حفظ سجل الحفظ');
     await cacheHifzHistory(
       (historyRes.data || []).map(r => ({ student_id: r.student_id, year_key: r.year_key, value: r.value }))
     );
 
-    // Cache year data (all years)
+    onProgress?.(3, 4, 'حفظ بيانات الأعوام');
     await cacheYearData(
       (yearDataRes.data || []).map(r => ({
         student_id: r.student_id, year: r.year,
@@ -72,6 +75,7 @@ export const syncFromCloud = async (): Promise<boolean> => {
     await setCachedSetting('active_year', settingsData?.active_year || '1447');
 
     await setLastSyncTime();
+    onProgress?.(4, 4, 'اكتمل');
     return true;
   } catch (err) {
     console.error('Sync from cloud failed:', err);
@@ -263,7 +267,7 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
 };
 
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
-export const syncToCloud = async (): Promise<boolean> => {
+export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
@@ -272,6 +276,10 @@ export const syncToCloud = async (): Promise<boolean> => {
     const students = await getCachedStudents();
     const allHistory = await getCachedHifzHistory();
     const allYearData = await getCachedYearData();
+
+    const total = students.length + allHistory.length + allYearData.length + 1;
+    let done = 0;
+    const tick = (label?: string) => onProgress?.(++done, total, label);
 
     // 1. Sync students - delete all and re-insert
     // First get existing cloud students to find ones to delete
@@ -328,6 +336,7 @@ export const syncToCloud = async (): Promise<boolean> => {
             s.id = newId;
           }
         }
+        tick('رفع الطالبات');
       }
     }
 
@@ -343,10 +352,12 @@ export const syncToCloud = async (): Promise<boolean> => {
       }));
       // Batch in chunks of 500
       for (let i = 0; i < historyRows.length; i += 500) {
+        const chunk = historyRows.slice(i, i + 500);
         await supabase.from('hifz_history').upsert(
-          historyRows.slice(i, i + 500),
+          chunk,
           { onConflict: 'student_id,year_key' }
         );
+        for (let k = 0; k < chunk.length; k++) tick('رفع سجل الحفظ');
       }
     }
 
@@ -361,16 +372,19 @@ export const syncToCloud = async (): Promise<boolean> => {
         status_prize: r.status_prize, rank: r.rank, teacher: r.teacher || '',
       }));
       for (let i = 0; i < yearRows.length; i += 500) {
+        const chunk = yearRows.slice(i, i + 500);
         await supabase.from('year_data').upsert(
-          yearRows.slice(i, i + 500),
+          chunk,
           { onConflict: 'student_id,year' }
         );
+        for (let k = 0; k < chunk.length; k++) tick('رفع بيانات الأعوام');
       }
     }
 
     // Re-sync from cloud to get correct IDs
     await syncFromCloud();
     await setLastSyncTime();
+    tick('اكتمل');
     return true;
   } catch (err) {
     console.error('Sync to cloud failed:', err);
@@ -381,4 +395,58 @@ export const syncToCloud = async (): Promise<boolean> => {
 // Legacy sync-compatible wrappers (for ImportExport component)
 export const saveGlobalStudents = async (students: Student[]) => {
   // handled per-student via saveStudent
+};
+
+// ===== Merge duplicate students by name (case-insensitive, trimmed) =====
+export const mergeDuplicateStudents = async (): Promise<number> => {
+  const students = await getCachedStudents();
+  const allHistory = await getCachedHifzHistory();
+  const allYearData = await getCachedYearData();
+
+  const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ');
+  const groups: Record<string, typeof students> = {};
+  for (const s of students) {
+    const key = norm(s.name);
+    if (!key) continue;
+    (groups[key] = groups[key] || []).push(s);
+  }
+
+  const { putCachedHifzRow, putCachedYearData, deleteItem } = await import("./localDB");
+  let mergedCount = 0;
+
+  for (const key in groups) {
+    const group = groups[key];
+    if (group.length < 2) continue;
+    // Keep the one with the smallest id as primary
+    group.sort((a, b) => a.id - b.id);
+    const primary = group[0];
+    const dupes = group.slice(1);
+
+    for (const dup of dupes) {
+      // Move hifz history (don't overwrite existing primary keys with empty values)
+      const dupHistory = allHistory.filter(h => h.student_id === dup.id);
+      for (const h of dupHistory) {
+        const existing = allHistory.find(r => r.student_id === primary.id && r.year_key === h.year_key);
+        if (!existing || !existing.value || existing.value === '0') {
+          await putCachedHifzRow({ student_id: primary.id, year_key: h.year_key, value: h.value });
+        }
+        await deleteItem('hifz_history', [h.student_id, h.year_key]);
+      }
+      // Move year data
+      const dupYears = allYearData.filter(y => y.student_id === dup.id);
+      for (const y of dupYears) {
+        const existing = allYearData.find(r => r.student_id === primary.id && r.year === y.year);
+        if (!existing || (!existing.parts && existing.total === '0')) {
+          await putCachedYearData({ ...y, student_id: primary.id });
+        }
+        await deleteItem('year_data', [y.student_id, y.year]);
+      }
+      // Delete duplicate student
+      const { deleteCachedStudent } = await import("./localDB");
+      await deleteCachedStudent(dup.id);
+      mergedCount++;
+    }
+  }
+
+  return mergedCount;
 };
