@@ -32,6 +32,7 @@ const Media = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -49,7 +50,22 @@ const Media = () => {
     if (error) {
       console.error(error);
     } else {
-      setMediaItems((data as MediaItem[]) || []);
+      const items = (data as MediaItem[]) || [];
+      setMediaItems(items);
+      // Generate signed URLs for all items
+      if (items.length > 0) {
+        const paths = items.map((i) => i.file_path);
+        const { data: signed } = await supabase.storage
+          .from("media")
+          .createSignedUrls(paths, 3600);
+        const map: Record<string, string> = {};
+        signed?.forEach((s, idx) => {
+          if (s.signedUrl) map[paths[idx]] = s.signedUrl;
+        });
+        setSignedUrls(map);
+      } else {
+        setSignedUrls({});
+      }
     }
     setLoading(false);
   }, [user, selectedYear]);
@@ -58,10 +74,7 @@ const Media = () => {
     loadMedia();
   }, [loadMedia]);
 
-  const getPublicUrl = (filePath: string) => {
-    const { data } = supabase.storage.from("media").getPublicUrl(filePath);
-    return data.publicUrl;
-  };
+  const getUrl = (filePath: string) => signedUrls[filePath] || "";
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !user) return;
@@ -218,7 +231,7 @@ const Media = () => {
                         >
                           {item.file_type === "image" ? (
                             <img
-                              src={getPublicUrl(item.file_path)}
+                              src={getUrl(item.file_path)}
                               alt={item.title}
                               className="w-full h-full object-cover"
                               loading="lazy"
@@ -260,13 +273,13 @@ const Media = () => {
           {previewItem && (
             previewItem.file_type === "image" ? (
               <img
-                src={getPublicUrl(previewItem.file_path)}
+                src={getUrl(previewItem.file_path)}
                 alt={previewItem.title}
                 className="w-full h-auto max-h-[85vh] object-contain"
               />
             ) : (
               <video
-                src={getPublicUrl(previewItem.file_path)}
+                src={getUrl(previewItem.file_path)}
                 controls
                 className="w-full max-h-[85vh]"
               />
