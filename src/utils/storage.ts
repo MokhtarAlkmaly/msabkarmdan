@@ -100,6 +100,19 @@ export const loadAllStudentsWithData = async (currentYear: string): Promise<Stud
     historyMap[row.student_id][row.year_key] = row.value;
   });
 
+  // Derive history from year_data.parts for ALL years (not just immediately previous).
+  // This ensures cumulative "previous hifz" reflects every prior year a student had parts in.
+  allYearData.forEach(row => {
+    const parts = parseFloat(row.parts) || 0;
+    if (parts <= 0) return;
+    if (!historyMap[row.student_id]) historyMap[row.student_id] = {};
+    const key = `h${row.year}`;
+    const existing = parseFloat(historyMap[row.student_id][key]) || 0;
+    if (parts > existing) {
+      historyMap[row.student_id][key] = parts.toString();
+    }
+  });
+
   const yearDataMap: Record<number, YearData> = {};
   allYearData
     .filter(r => r.year === currentYear)
