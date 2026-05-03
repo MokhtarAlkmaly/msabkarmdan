@@ -29,11 +29,14 @@ supabase.auth.onAuthStateChange(() => {
 const isOnline = () => navigator.onLine;
 
 // ===== Initial sync: download all data from cloud to local =====
-export const syncFromCloud = async (): Promise<boolean> => {
+export type ProgressCb = (current: number, total: number, label?: string) => void;
+
+export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId || !isOnline()) return false;
 
   try {
+    onProgress?.(0, 4, 'تحميل الطالبات');
     const [studentsRes, historyRes, yearDataRes] = await Promise.all([
       supabase.from('students').select('*').eq('user_id', userId).order('id'),
       supabase.from('hifz_history').select('*').eq('user_id', userId),
@@ -42,17 +45,17 @@ export const syncFromCloud = async (): Promise<boolean> => {
 
     if (studentsRes.error) throw studentsRes.error;
 
-    // Cache students
+    onProgress?.(1, 4, 'حفظ الطالبات');
     await cacheStudents(
       (studentsRes.data || []).map(s => ({ id: s.id, name: s.name, teacher: s.teacher, user_id: s.user_id }))
     );
 
-    // Cache hifz history
+    onProgress?.(2, 4, 'حفظ سجل الحفظ');
     await cacheHifzHistory(
       (historyRes.data || []).map(r => ({ student_id: r.student_id, year_key: r.year_key, value: r.value }))
     );
 
-    // Cache year data (all years)
+    onProgress?.(3, 4, 'حفظ بيانات الأعوام');
     await cacheYearData(
       (yearDataRes.data || []).map(r => ({
         student_id: r.student_id, year: r.year,
@@ -72,6 +75,7 @@ export const syncFromCloud = async (): Promise<boolean> => {
     await setCachedSetting('active_year', settingsData?.active_year || '1447');
 
     await setLastSyncTime();
+    onProgress?.(4, 4, 'اكتمل');
     return true;
   } catch (err) {
     console.error('Sync from cloud failed:', err);
