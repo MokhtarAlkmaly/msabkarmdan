@@ -396,3 +396,57 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
 export const saveGlobalStudents = async (students: Student[]) => {
   // handled per-student via saveStudent
 };
+
+// ===== Merge duplicate students by name (case-insensitive, trimmed) =====
+export const mergeDuplicateStudents = async (): Promise<number> => {
+  const students = await getCachedStudents();
+  const allHistory = await getCachedHifzHistory();
+  const allYearData = await getCachedYearData();
+
+  const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ');
+  const groups: Record<string, typeof students> = {};
+  for (const s of students) {
+    const key = norm(s.name);
+    if (!key) continue;
+    (groups[key] = groups[key] || []).push(s);
+  }
+
+  const { putCachedHifzRow, putCachedYearData, deleteItem } = await import("./localDB");
+  let mergedCount = 0;
+
+  for (const key in groups) {
+    const group = groups[key];
+    if (group.length < 2) continue;
+    // Keep the one with the smallest id as primary
+    group.sort((a, b) => a.id - b.id);
+    const primary = group[0];
+    const dupes = group.slice(1);
+
+    for (const dup of dupes) {
+      // Move hifz history (don't overwrite existing primary keys with empty values)
+      const dupHistory = allHistory.filter(h => h.student_id === dup.id);
+      for (const h of dupHistory) {
+        const existing = allHistory.find(r => r.student_id === primary.id && r.year_key === h.year_key);
+        if (!existing || !existing.value || existing.value === '0') {
+          await putCachedHifzRow({ student_id: primary.id, year_key: h.year_key, value: h.value });
+        }
+        await deleteItem('hifz_history', [h.student_id, h.year_key]);
+      }
+      // Move year data
+      const dupYears = allYearData.filter(y => y.student_id === dup.id);
+      for (const y of dupYears) {
+        const existing = allYearData.find(r => r.student_id === primary.id && r.year === y.year);
+        if (!existing || (!existing.parts && existing.total === '0')) {
+          await putCachedYearData({ ...y, student_id: primary.id });
+        }
+        await deleteItem('year_data', [y.student_id, y.year]);
+      }
+      // Delete duplicate student
+      const { deleteCachedStudent } = await import("./localDB");
+      await deleteCachedStudent(dup.id);
+      mergedCount++;
+    }
+  }
+
+  return mergedCount;
+};
