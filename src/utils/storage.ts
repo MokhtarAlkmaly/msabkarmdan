@@ -8,6 +8,10 @@ import {
   setLastSyncTime, isCachePopulated, clearAllCache,
   CachedStudent, CachedHifzRow, CachedYearData,
 } from "./localDB";
+import {
+  markDirty, getPendingChanges, clearPending, clearAllPending,
+  remapPendingStudentId,
+} from "./localDB";
 
 // ===== Helper: get cached user =====
 let cachedUserId: string | null = null;
@@ -152,6 +156,7 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
 
   if (student.id) {
     await putCachedStudent({ id: student.id, name: student.name, teacher: student.teacher, user_id: userId });
+    await markDirty('student', 'upsert', { id: student.id });
     return student.id;
   } else {
     // Generate a temporary ID for new students
@@ -159,12 +164,14 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
     const maxId = existing.reduce((max, s) => Math.max(max, s.id), 0);
     const newId = maxId + 1;
     await putCachedStudent({ id: newId, name: student.name, teacher: student.teacher, user_id: userId });
+    await markDirty('student', 'upsert', { id: newId });
     return newId;
   }
 };
 
 export const deleteStudent = async (id: number) => {
   await deleteCachedStudent(id);
+  await markDirty('student', 'delete', { id });
   // Also delete related cache
   const allHistory = await getCachedHifzHistory();
   const allYearData = await getCachedYearData();
@@ -180,6 +187,11 @@ export const deleteStudent = async (id: number) => {
 
 export const deleteAllStudents = async () => {
   const { clearStore } = await import("./localDB");
+  // Mark every existing student as deleted so cloud will reflect it
+  const existing = await getCachedStudents();
+  for (const s of existing) {
+    await markDirty('student', 'delete', { id: s.id });
+  }
   await clearStore('students');
   await clearStore('hifz_history');
   await clearStore('year_data');
@@ -188,6 +200,7 @@ export const deleteAllStudents = async () => {
 export const saveHifzHistory = async (studentId: number, history: HifzHistory) => {
   for (const [yearKey, value] of Object.entries(history)) {
     await putCachedHifzRow({ student_id: studentId, year_key: yearKey, value: value || '0' });
+    await markDirty('hifz', 'upsert', { student_id: studentId, year_key: yearKey });
   }
 };
 
@@ -208,6 +221,7 @@ export const saveYearData = async (year: string, studentId: number, data: YearDa
     total: data.total, grade: data.grade, prize: data.prize,
     status_prize: data.statusPrize, rank: data.rank, teacher: data.teacher || '',
   });
+  await markDirty('year', 'upsert', { student_id: studentId, year });
 };
 
 export const loadYearData = async (year: string, studentId: number): Promise<YearData> => {
