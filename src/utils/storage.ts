@@ -8,6 +8,10 @@ import {
   setLastSyncTime, isCachePopulated, clearAllCache,
   CachedStudent, CachedHifzRow, CachedYearData,
 } from "./localDB";
+import {
+  markDirty, getPendingChanges, clearPending, clearAllPending,
+  remapPendingStudentId,
+} from "./localDB";
 
 // ===== Helper: get cached user =====
 let cachedUserId: string | null = null;
@@ -152,6 +156,7 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
 
   if (student.id) {
     await putCachedStudent({ id: student.id, name: student.name, teacher: student.teacher, user_id: userId });
+    await markDirty('student', 'upsert', { id: student.id });
     return student.id;
   } else {
     // Generate a temporary ID for new students
@@ -159,12 +164,14 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
     const maxId = existing.reduce((max, s) => Math.max(max, s.id), 0);
     const newId = maxId + 1;
     await putCachedStudent({ id: newId, name: student.name, teacher: student.teacher, user_id: userId });
+    await markDirty('student', 'upsert', { id: newId });
     return newId;
   }
 };
 
 export const deleteStudent = async (id: number) => {
   await deleteCachedStudent(id);
+  await markDirty('student', 'delete', { id });
   // Also delete related cache
   const allHistory = await getCachedHifzHistory();
   const allYearData = await getCachedYearData();
@@ -180,6 +187,11 @@ export const deleteStudent = async (id: number) => {
 
 export const deleteAllStudents = async () => {
   const { clearStore } = await import("./localDB");
+  // Mark every existing student as deleted so cloud will reflect it
+  const existing = await getCachedStudents();
+  for (const s of existing) {
+    await markDirty('student', 'delete', { id: s.id });
+  }
   await clearStore('students');
   await clearStore('hifz_history');
   await clearStore('year_data');
@@ -188,6 +200,7 @@ export const deleteAllStudents = async () => {
 export const saveHifzHistory = async (studentId: number, history: HifzHistory) => {
   for (const [yearKey, value] of Object.entries(history)) {
     await putCachedHifzRow({ student_id: studentId, year_key: yearKey, value: value || '0' });
+    await markDirty('hifz', 'upsert', { student_id: studentId, year_key: yearKey });
   }
 };
 
@@ -208,6 +221,7 @@ export const saveYearData = async (year: string, studentId: number, data: YearDa
     total: data.total, grade: data.grade, prize: data.prize,
     status_prize: data.statusPrize, rank: data.rank, teacher: data.teacher || '',
   });
+  await markDirty('year', 'upsert', { student_id: studentId, year });
 };
 
 export const loadYearData = async (year: string, studentId: number): Promise<YearData> => {
@@ -286,116 +300,118 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
   if (!isOnline()) return false;
 
   try {
+    const pending = await getPendingChanges();
+    if (pending.length === 0) {
+      onProgress?.(1, 1, 'لا تغييرات');
+      await setLastSyncTime();
+      return true;
+    }
+
     const students = await getCachedStudents();
     const allHistory = await getCachedHifzHistory();
     const allYearData = await getCachedYearData();
 
-    const total = students.length + allHistory.length + allYearData.length + 1;
+    // Get existing cloud student ids to know which student upserts are inserts vs updates
+    const { data: cloudStudents } = await supabase
+      .from('students').select('id').eq('user_id', userId);
+    const cloudIdSet = new Set((cloudStudents || []).map(s => s.id));
+
+    // Group changes by entity & op
+    const studentUpserts = pending.filter(p => p.entity === 'student' && p.op === 'upsert');
+    const studentDeletes = pending.filter(p => p.entity === 'student' && p.op === 'delete');
+    const hifzUpserts = pending.filter(p => p.entity === 'hifz' && p.op === 'upsert');
+    const yearUpserts = pending.filter(p => p.entity === 'year' && p.op === 'upsert');
+
+    const total = pending.length + 1;
     let done = 0;
     const tick = (label?: string) => onProgress?.(++done, total, label);
 
-    // 1. Sync students - delete all and re-insert
-    // First get existing cloud students to find ones to delete
-    const { data: cloudStudents } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', userId);
-
-    const localIds = new Set(students.map(s => s.id));
-    const cloudIds = (cloudStudents || []).map(s => s.id);
-    
-    // Delete students that are in cloud but not local
-    const toDelete = cloudIds.filter(id => !localIds.has(id));
-    if (toDelete.length > 0) {
-      await supabase.from('students').delete().eq('user_id', userId).in('id', toDelete);
+    // 1) Student deletes
+    const deleteIds = studentDeletes.map(p => p.ref.id).filter(id => cloudIdSet.has(id));
+    if (deleteIds.length > 0) {
+      await supabase.from('students').delete().eq('user_id', userId).in('id', deleteIds);
     }
+    for (const p of studentDeletes) { await clearPending(p.key); tick('حذف الطالبات'); }
 
-    // Upsert all local students
-    if (students.length > 0) {
-      // For students with temp IDs (not in cloud), we need to insert them
-      // For existing ones, update
-      for (const s of students) {
-        const { data: existing } = await supabase
-          .from('students')
-          .select('id')
-          .eq('id', s.id)
-          .eq('user_id', userId)
-          .maybeSingle();
+    // 2) Student upserts (insert new vs update existing)
+    for (const p of studentUpserts) {
+      const local = students.find(s => s.id === p.ref.id);
+      if (!local) { await clearPending(p.key); tick('رفع الطالبات'); continue; }
 
-        if (existing) {
-          await supabase.from('students')
-            .update({ name: s.name, teacher: s.teacher })
-            .eq('id', s.id)
-            .eq('user_id', userId);
-        } else {
-          const { data: newStudent } = await supabase.from('students')
-            .insert({ name: s.name, teacher: s.teacher, user_id: userId })
-            .select('id')
-            .single();
-          
-          if (newStudent) {
-            // Update local cache and related data with new ID
-            const oldId = s.id;
-            const newId = newStudent.id;
-            
-            // Update history references
-            for (const h of allHistory.filter(r => r.student_id === oldId)) {
-              h.student_id = newId;
-            }
-            // Update year data references
-            for (const y of allYearData.filter(r => r.student_id === oldId)) {
-              y.student_id = newId;
-            }
-            s.id = newId;
+      if (cloudIdSet.has(local.id)) {
+        await supabase.from('students')
+          .update({ name: local.name, teacher: local.teacher })
+          .eq('id', local.id).eq('user_id', userId);
+      } else {
+        const { data: inserted, error } = await supabase.from('students')
+          .insert({ name: local.name, teacher: local.teacher, user_id: userId })
+          .select('id').single();
+        if (!error && inserted && inserted.id !== local.id) {
+          const oldId = local.id;
+          const newId = inserted.id;
+          // Update local caches
+          await deleteCachedStudent(oldId);
+          await putCachedStudent({ id: newId, name: local.name, teacher: local.teacher, user_id: userId });
+          local.id = newId;
+          // Move related history & year_data rows to new id locally
+          const { deleteItem, putItem } = await import("./localDB");
+          for (const h of allHistory.filter(r => r.student_id === oldId)) {
+            await deleteItem('hifz_history', [oldId, h.year_key]);
+            h.student_id = newId;
+            await putItem('hifz_history', h);
           }
+          for (const y of allYearData.filter(r => r.student_id === oldId)) {
+            await deleteItem('year_data', [oldId, y.year]);
+            y.student_id = newId;
+            await putItem('year_data', y);
+          }
+          await remapPendingStudentId(oldId, newId);
+          cloudIdSet.add(newId);
+        } else if (inserted) {
+          cloudIdSet.add(inserted.id);
         }
-        tick('رفع الطالبات');
       }
+      await clearPending(p.key);
+      tick('رفع الطالبات');
     }
 
-    // 2. Sync hifz history
-    // Delete all and re-insert
-    await supabase.from('hifz_history').delete().eq('user_id', userId);
-    if (allHistory.length > 0) {
-      const historyRows = allHistory.map(h => ({
-        student_id: h.student_id,
-        user_id: userId,
-        year_key: h.year_key,
-        value: h.value || '0',
-      }));
-      // Batch in chunks of 500
-      for (let i = 0; i < historyRows.length; i += 500) {
-        const chunk = historyRows.slice(i, i + 500);
-        await supabase.from('hifz_history').upsert(
-          chunk,
-          { onConflict: 'student_id,year_key' }
-        );
-        for (let k = 0; k < chunk.length; k++) tick('رفع سجل الحفظ');
+    // Refresh pending after potential remap
+    const pendingAfter = await getPendingChanges();
+    const hifzPending = pendingAfter.filter(p => p.entity === 'hifz' && p.op === 'upsert');
+    const yearPending = pendingAfter.filter(p => p.entity === 'year' && p.op === 'upsert');
+
+    // 3) Hifz upserts
+    if (hifzPending.length > 0) {
+      const rows = hifzPending.map(p => {
+        const r = allHistory.find(h => h.student_id === p.ref.student_id && h.year_key === p.ref.year_key);
+        return r ? { student_id: r.student_id, user_id: userId, year_key: r.year_key, value: r.value || '0' } : null;
+      }).filter(Boolean) as any[];
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        await supabase.from('hifz_history').upsert(chunk, { onConflict: 'student_id,year_key' });
       }
+      for (const p of hifzPending) { await clearPending(p.key); tick('رفع سجل الحفظ'); }
     }
 
-    // 3. Sync year data
-    await supabase.from('year_data').delete().eq('user_id', userId);
-    if (allYearData.length > 0) {
-      const yearRows = allYearData.map(r => ({
-        student_id: r.student_id, user_id: userId, year: r.year,
-        base_hifz: r.base_hifz, total_hifz: r.total_hifz, parts: r.parts,
-        annual: r.annual, recitation: r.recitation, memorization: r.memorization,
-        total: r.total, grade: r.grade, prize: r.prize,
-        status_prize: r.status_prize, rank: r.rank, teacher: r.teacher || '',
-      }));
-      for (let i = 0; i < yearRows.length; i += 500) {
-        const chunk = yearRows.slice(i, i + 500);
-        await supabase.from('year_data').upsert(
-          chunk,
-          { onConflict: 'student_id,year' }
-        );
-        for (let k = 0; k < chunk.length; k++) tick('رفع بيانات الأعوام');
+    // 4) Year data upserts
+    if (yearPending.length > 0) {
+      const rows = yearPending.map(p => {
+        const r = allYearData.find(y => y.student_id === p.ref.student_id && y.year === p.ref.year);
+        return r ? {
+          student_id: r.student_id, user_id: userId, year: r.year,
+          base_hifz: r.base_hifz, total_hifz: r.total_hifz, parts: r.parts,
+          annual: r.annual, recitation: r.recitation, memorization: r.memorization,
+          total: r.total, grade: r.grade, prize: r.prize,
+          status_prize: r.status_prize, rank: r.rank, teacher: r.teacher || '',
+        } : null;
+      }).filter(Boolean) as any[];
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        await supabase.from('year_data').upsert(chunk, { onConflict: 'student_id,year' });
       }
+      for (const p of yearPending) { await clearPending(p.key); tick('رفع بيانات الأعوام'); }
     }
 
-    // Re-sync from cloud to get correct IDs
-    await syncFromCloud();
     await setLastSyncTime();
     tick('اكتمل');
     return true;
