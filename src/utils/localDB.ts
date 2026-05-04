@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'inmaa_cache';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = {
   students: 'students',
@@ -12,6 +12,7 @@ const STORES = {
   yearData: 'year_data',
   settings: 'settings',
   meta: 'meta',
+  pending: 'pending_changes',
 } as const;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -38,6 +39,9 @@ const openDB = (): Promise<IDBDatabase> => {
       }
       if (!db.objectStoreNames.contains(STORES.meta)) {
         db.createObjectStore(STORES.meta, { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains(STORES.pending)) {
+        db.createObjectStore(STORES.pending, { keyPath: 'key' });
       }
     };
 
@@ -211,4 +215,50 @@ export const clearAllCache = async () => {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
   });
+};
+
+// ========== Pending Changes (incremental sync) ==========
+
+export type PendingOp = 'upsert' | 'delete';
+export type PendingEntity = 'student' | 'hifz' | 'year';
+
+export interface PendingChange {
+  key: string;          // e.g. "student:5", "hifz:5|h1441", "year:5|1447"
+  entity: PendingEntity;
+  op: PendingOp;
+  ref: any;             // identifier(s) needed to resolve the record
+  ts: number;
+}
+
+export const markDirty = (entity: PendingEntity, op: PendingOp, ref: any) => {
+  let key = '';
+  if (entity === 'student') key = `student:${ref.id}`;
+  else if (entity === 'hifz') key = `hifz:${ref.student_id}|${ref.year_key}`;
+  else if (entity === 'year') key = `year:${ref.student_id}|${ref.year}`;
+  return putItem(STORES.pending, { key, entity, op, ref, ts: Date.now() } as PendingChange);
+};
+
+export const getPendingChanges = () => getAllItems<PendingChange>(STORES.pending);
+
+export const clearPending = (key: string) => deleteItem(STORES.pending, key);
+
+export const clearAllPending = () => clearStore(STORES.pending);
+
+// Re-key pending entries when a temp student id is replaced by the real cloud id
+export const remapPendingStudentId = async (oldId: number, newId: number) => {
+  const all = await getPendingChanges();
+  for (const p of all) {
+    let touched = false;
+    if (p.entity === 'student' && p.ref?.id === oldId) {
+      p.ref.id = newId;
+      touched = true;
+    } else if ((p.entity === 'hifz' || p.entity === 'year') && p.ref?.student_id === oldId) {
+      p.ref.student_id = newId;
+      touched = true;
+    }
+    if (touched) {
+      await deleteItem(STORES.pending, p.key);
+      await markDirty(p.entity, p.op, p.ref);
+    }
+  }
 };
