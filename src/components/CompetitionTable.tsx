@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Student, HifzHistory, YearData } from "@/types/student";
 import { TableHeader } from "./table/TableHeader";
 import { SortField, SortDirection } from "./table/TableHeader";
@@ -24,13 +24,31 @@ interface Props {
 }
 
 export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, dirtyMap, onDirtyChange }: Props) => {
-  const [selectedTeacher, setSelectedTeacher] = useState<string>("all");
-  const [nameFilter, setNameFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [gradeFilter, setGradeFilter] = useState<string>("all");
-  const [partsFilter, setPartsFilter] = useState<string>("");
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const STORAGE_KEY = "competitionTable.filters";
+  type Persisted = {
+    selectedTeacher: string; nameFilter: string; statusFilter: string;
+    gradeFilter: string; partsFilter: string;
+    sortField: SortField | null; sortDirection: SortDirection;
+  };
+  const loadPersisted = (): Partial<Persisted> => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
+  };
+  const saved = loadPersisted();
+  const [selectedTeacher, setSelectedTeacher] = useState<string>(saved.selectedTeacher ?? "all");
+  const [nameFilter, setNameFilter] = useState<string>(saved.nameFilter ?? "");
+  const [statusFilter, setStatusFilter] = useState<string>(saved.statusFilter ?? "all");
+  const [gradeFilter, setGradeFilter] = useState<string>(saved.gradeFilter ?? "all");
+  const [partsFilter, setPartsFilter] = useState<string>(saved.partsFilter ?? "");
+  const [sortField, setSortField] = useState<SortField | null>(saved.sortField ?? null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(saved.sortDirection ?? null);
+
+  useEffect(() => {
+    const data: Persisted = {
+      selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter,
+      sortField, sortDirection,
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
+  }, [selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection]);
 
   const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
