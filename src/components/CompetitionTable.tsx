@@ -6,6 +6,7 @@ import { TableRow } from "./table/TableRow";
 import { TableFilters } from "./table/TableFilters";
 import { calculateGrade, calculateBaseHifz } from "@/utils/calculations";
 import logo from "@/assets/logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DirtyData {
   name: string;
@@ -41,6 +42,33 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
   const [partsFilter, setPartsFilter] = useState<string>(saved.partsFilter ?? "");
   const [sortField, setSortField] = useState<SortField | null>(saved.sortField ?? null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(saved.sortDirection ?? null);
+  const [cloudLoaded, setCloudLoaded] = useState(false);
+
+  // Pull filter settings from cloud once on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setCloudLoaded(true); return; }
+        const { data } = await supabase
+          .from('user_settings').select('table_filters')
+          .eq('user_id', user.id).maybeSingle();
+        const remote = (data?.table_filters || {}) as Partial<Persisted>;
+        if (!cancelled && remote && Object.keys(remote).length > 0) {
+          if (remote.selectedTeacher !== undefined) setSelectedTeacher(remote.selectedTeacher);
+          if (remote.nameFilter !== undefined) setNameFilter(remote.nameFilter);
+          if (remote.statusFilter !== undefined) setStatusFilter(remote.statusFilter);
+          if (remote.gradeFilter !== undefined) setGradeFilter(remote.gradeFilter);
+          if (remote.partsFilter !== undefined) setPartsFilter(remote.partsFilter);
+          if (remote.sortField !== undefined) setSortField(remote.sortField);
+          if (remote.sortDirection !== undefined) setSortDirection(remote.sortDirection);
+        }
+      } catch (e) { /* offline ok */ }
+      finally { if (!cancelled) setCloudLoaded(true); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const data: Persisted = {
@@ -48,7 +76,20 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
       sortField, sortDirection,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
-  }, [selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection]);
+    if (!cloudLoaded) return;
+    if (!navigator.onLine) return;
+    const handle = setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        await supabase.from('user_settings').upsert(
+          { user_id: user.id, table_filters: data as any },
+          { onConflict: 'user_id' }
+        );
+      } catch { /* ignore */ }
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection, cloudLoaded]);
 
   const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {

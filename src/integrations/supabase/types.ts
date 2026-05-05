@@ -117,6 +117,7 @@ export type Database = {
           active_year: string
           created_at: string
           id: string
+          table_filters: Json
           updated_at: string
           user_id: string
         }
@@ -124,6 +125,7 @@ export type Database = {
           active_year?: string
           created_at?: string
           id?: string
+          table_filters?: Json
           updated_at?: string
           user_id: string
         }
@@ -131,6 +133,7 @@ export type Database = {
           active_year?: string
           created_at?: string
           id?: string
+          table_filters?: Json
           updated_at?: string
           user_id?: string
         }
