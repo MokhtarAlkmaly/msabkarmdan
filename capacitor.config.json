@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.4182d60713e64531b24380f4598877f3",
+  "appName": "mosabkamarkz",
+  "webDir": "dist",
+  "server": {
+    "url": "https://4182d607-13e6-4531-b243-80f4598877f3.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
