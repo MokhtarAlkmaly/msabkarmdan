@@ -276,7 +276,19 @@ const Teachers = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">سنة المسابقة</span>
+            <Select value={currentYear} onValueChange={(v) => void handleYearChange(v)}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {YEARS.map((y) => (
+                  <SelectItem key={y} value={y}>{y}هـ</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2">
             <Link to="/awards">
               <Button variant="outline" className="gap-2">
