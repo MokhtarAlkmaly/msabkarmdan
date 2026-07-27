@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Award, Plus, Pencil, Trash2, Save, Printer, Gift, Sparkles, Calendar } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
-import { loadAllStudentsWithData, getActiveYear } from "@/utils/storage";
+import { loadAllStudentsWithData, getActiveYear, setActiveYear } from "@/utils/storage";
 
 type AwardType = "khatm_bonus" | "ceremony" | "annual" | "certificate";
 type AwardKind = "cash" | "in_kind";
