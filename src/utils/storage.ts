@@ -1,4 +1,4 @@
-import { Student, HifzHistory, YearData } from "@/types/student";
+import { Student, HifzHistory, YearData, START_YEAR } from "@/types/student";
 import { supabase } from "@/integrations/supabase/client";
 import {
   cacheStudents, getCachedStudents, putCachedStudent, deleteCachedStudent,
@@ -76,7 +76,9 @@ export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> =
       .select('active_year')
       .eq('user_id', userId)
       .maybeSingle();
-    await setCachedSetting('active_year', settingsData?.active_year || '1447');
+    if (settingsData?.active_year) {
+      await setCachedSetting('active_year', settingsData.active_year);
+    }
 
     await setLastSyncTime();
     onProgress?.(4, 4, 'اكتمل');
