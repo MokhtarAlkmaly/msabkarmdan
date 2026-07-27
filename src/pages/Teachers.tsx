@@ -13,6 +13,7 @@ import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadAllStudentsWithData,
   getActiveYear,
+  setActiveYear,
   saveStudent,
   saveYearData,
   syncToCloud,
@@ -39,10 +40,12 @@ interface TeacherAggregate {
   students: Student[];
 }
 
+const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => String(START_YEAR + i));
+
 const Teachers = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentYear, setCurrentYear] = useState("1447");
+  const [currentYear, setCurrentYear] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [bonuses, setBonuses] = useState<BonusRow[]>([]);
   const [registered, setRegistered] = useState<{ id: string; name: string }[]>([]);
@@ -66,9 +69,9 @@ const Teachers = () => {
   const [newTeacherName, setNewTeacherName] = useState("");
 
   const loadAll = useCallback(async () => {
+    if (!currentYear) return;
     setLoading(true);
-    const year = await getActiveYear();
-    setCurrentYear(year);
+    const year = currentYear;
     setBonusYear(year);
     const list = await loadAllStudentsWithData(year);
     setStudents(list);
@@ -87,9 +90,18 @@ const Teachers = () => {
       setRegistered((regData as any) || []);
     }
     setLoading(false);
-  }, [user]);
+  }, [user, currentYear]);
+
+  useEffect(() => {
+    void (async () => setCurrentYear(await getActiveYear()))();
+  }, []);
 
   useEffect(() => { void loadAll(); }, [loadAll]);
+
+  const handleYearChange = async (y: string) => {
+    setCurrentYear(y);
+    await setActiveYear(y);
+  };
 
   const teachers = useMemo<TeacherAggregate[]>(() => {
     const map = new Map<string, { students: Student[]; registered: boolean; registeredId?: string }>();
