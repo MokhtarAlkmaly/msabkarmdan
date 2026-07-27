@@ -264,16 +264,39 @@ export const loadYearData = async (year: string, studentId: number): Promise<Yea
   };
 };
 
+// Latest Hijri year that actually has data; falls back to the first competition year
+const getLatestDataYear = async (): Promise<string> => {
+  try {
+    const cached = await getCachedYearData();
+    const cachedYears = cached.map(r => r.year).filter(Boolean);
+    if (cachedYears.length) return cachedYears.sort().slice(-1)[0];
+  } catch { /* ignore */ }
+
+  const userId = await getUserId();
+  if (userId && isOnline()) {
+    const { data } = await supabase
+      .from('year_data')
+      .select('year')
+      .eq('user_id', userId)
+      .order('year', { ascending: false })
+      .limit(1);
+    if (data?.[0]?.year) return data[0].year;
+  }
+
+  return String(START_YEAR);
+};
+
 export const getActiveYear = async (): Promise<string> => {
   const hasCache = await isCachePopulated();
   if (hasCache) {
     const year = await getCachedSetting<string>('active_year');
-    return year || '1447';
+    if (year) return year;
+    return getLatestDataYear();
   }
 
   // Fallback to cloud
   const userId = await getUserId();
-  if (!userId || !isOnline()) return '1447';
+  if (!userId || !isOnline()) return getLatestDataYear();
 
   const { data } = await supabase
     .from('user_settings')
@@ -281,7 +304,7 @@ export const getActiveYear = async (): Promise<string> => {
     .eq('user_id', userId)
     .maybeSingle();
 
-  const year = data?.active_year || '1447';
+  const year = data?.active_year || (await getLatestDataYear());
   await setCachedSetting('active_year', year);
   return year;
 };
