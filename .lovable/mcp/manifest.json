@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://hzpvtmfgvddjkuzonict.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "ramadan-competition-mcp",
+      "version": "0.1.0",
+      "title": "كشف المسابقة الرمضانية — MCP"
+    },
+    "tools": [
+      {
+        "name": "list_students",
+        "title": "List students",
+        "description": "List the signed-in user's students, optionally filtered by teacher name.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "teacher": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional exact teacher name to filter by."
+            },
+            "limit": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return. Default 100."
+            }
+          },
+          "required": [
+            "teacher",
+            "limit"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_teachers",
+        "title": "List teachers",
+        "description": "List teachers registered for a given Hijri year.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "year": {
+              "type": "string",
+              "description": "Hijri year key, e.g. '1446'."
+            }
+          },
+          "required": [
+            "year"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_teacher_bonuses",
+        "title": "List teacher bonuses",
+        "description": "List monthly teacher bonuses (الإكراميات) for a given Hijri year, optionally filtered by teacher.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "year": {
+              "type": "string",
+              "description": "Hijri year key, e.g. '1446'."
+            },
+            "teacher_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional teacher name filter."
+            }
+          },
+          "required": [
+            "year",
+            "teacher_name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_student_year_data",
+        "title": "Get student year data",
+        "description": "Fetch a student's competition data (grades, hifz, teacher, prize) for a specific Hijri year.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "student_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Student id."
+            },
+            "year": {
+              "type": "string",
+              "description": "Hijri year key, e.g. '1446'."
+            }
+          },
+          "required": [
+            "student_id",
+            "year"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
