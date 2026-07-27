@@ -390,6 +390,21 @@ const Index = () => {
         <ImportExport onDataImported={loadData} />
 
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
+            <Link to="/teachers" className="w-full sm:w-auto">
+              <Button className="w-full gap-2">
+                <Users className="h-4 w-4" />
+                المعلمات
+              </Button>
+            </Link>
+            <Link to="/awards" className="w-full sm:w-auto">
+              <Button className="w-full gap-2">
+                <Award className="h-4 w-4" />
+                الإكراميات والجوائز
+              </Button>
+            </Link>
+          </div>
+
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-md border-2 border-primary">
               <Calendar className="h-5 w-5 text-primary" />
