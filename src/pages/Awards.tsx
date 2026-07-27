@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Award, Plus, Pencil, Trash2, Save, Printer, Gift, Sparkles, Calendar } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
-import { loadAllStudentsWithData, getActiveYear } from "@/utils/storage";
+import { loadAllStudentsWithData, getActiveYear, setActiveYear } from "@/utils/storage";
 
 type AwardType = "khatm_bonus" | "ceremony" | "annual" | "certificate";
 type AwardKind = "cash" | "in_kind";
@@ -53,7 +53,7 @@ const esc = (s: string) =>
 const Awards = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentYear, setCurrentYear] = useState("1447");
+  const [currentYear, setCurrentYear] = useState<string>("");
   const [awards, setAwards] = useState<AwardRow[]>([]);
   const [teachers, setTeachers] = useState<string[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -77,10 +77,9 @@ const Awards = () => {
   });
 
   const loadAll = useCallback(async () => {
-    if (!user) return;
+    if (!user || !currentYear) return;
     setLoading(true);
-    const year = await getActiveYear();
-    setCurrentYear(year);
+    const year = currentYear;
     setForm((f) => ({ ...f, year }));
     const list = await loadAllStudentsWithData(year);
     setStudents(list);
@@ -104,11 +103,20 @@ const Awards = () => {
       .order("awarded_at", { ascending: false });
     setAwards((awardData as AwardRow[]) || []);
     setLoading(false);
-  }, [user]);
+  }, [user, currentYear]);
+
+  useEffect(() => {
+    void (async () => setCurrentYear(await getActiveYear()))();
+  }, []);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  const handleYearChange = async (y: string) => {
+    setCurrentYear(y);
+    await setActiveYear(y);
+  };
 
   const khatimat = useMemo(
     () =>
@@ -421,7 +429,7 @@ const Awards = () => {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             <span className="text-sm">العام:</span>
-            <Select value={currentYear} onValueChange={setCurrentYear}>
+            <Select value={currentYear} onValueChange={(v) => void handleYearChange(v)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>

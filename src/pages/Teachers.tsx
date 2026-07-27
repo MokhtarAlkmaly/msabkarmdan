@@ -13,6 +13,7 @@ import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadAllStudentsWithData,
   getActiveYear,
+  setActiveYear,
   saveStudent,
   saveYearData,
   syncToCloud,
@@ -39,24 +40,26 @@ interface TeacherAggregate {
   students: Student[];
 }
 
+const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => String(START_YEAR + i));
+
 const Teachers = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentYear, setCurrentYear] = useState("1447");
+  const [currentYear, setCurrentYear] = useState<string>("");
   const [students, setStudents] = useState<Student[]>([]);
   const [bonuses, setBonuses] = useState<BonusRow[]>([]);
   const [registered, setRegistered] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // edit dialog
-  const [editTeacher, setEditTeacher] = useState<string | null>(null);
+  const [editTeacher, setEditTeacher] = useState<string>("");
   const [editName, setEditName] = useState("");
 
   // view students dialog
-  const [viewTeacher, setViewTeacher] = useState<string | null>(null);
+  const [viewTeacher, setViewTeacher] = useState<string>("");
 
   // bonus dialog
-  const [bonusTeacher, setBonusTeacher] = useState<string | null>(null);
+  const [bonusTeacher, setBonusTeacher] = useState<string>("");
   const [bonusYear, setBonusYear] = useState("1447");
   const [bonusMonth, setBonusMonth] = useState<number>(1);
   const [bonusAmount, setBonusAmount] = useState<string>("0");
@@ -66,9 +69,9 @@ const Teachers = () => {
   const [newTeacherName, setNewTeacherName] = useState("");
 
   const loadAll = useCallback(async () => {
+    if (!currentYear) return;
     setLoading(true);
-    const year = await getActiveYear();
-    setCurrentYear(year);
+    const year = currentYear;
     setBonusYear(year);
     const list = await loadAllStudentsWithData(year);
     setStudents(list);
@@ -87,9 +90,18 @@ const Teachers = () => {
       setRegistered((regData as any) || []);
     }
     setLoading(false);
-  }, [user]);
+  }, [user, currentYear]);
+
+  useEffect(() => {
+    void (async () => setCurrentYear(await getActiveYear()))();
+  }, []);
 
   useEffect(() => { void loadAll(); }, [loadAll]);
+
+  const handleYearChange = async (y: string) => {
+    setCurrentYear(y);
+    await setActiveYear(y);
+  };
 
   const teachers = useMemo<TeacherAggregate[]>(() => {
     const map = new Map<string, { students: Student[]; registered: boolean; registeredId?: string }>();
@@ -264,7 +276,19 @@ const Teachers = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">سنة المسابقة</span>
+            <Select value={currentYear} onValueChange={(v) => void handleYearChange(v)}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {YEARS.map((y) => (
+                  <SelectItem key={y} value={y}>{y}هـ</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2">
             <Link to="/awards">
               <Button variant="outline" className="gap-2">
