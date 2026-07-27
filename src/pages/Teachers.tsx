@@ -45,21 +45,21 @@ const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => String
 const Teachers = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentYear, setCurrentYear] = useState<string | null>(null);
+  const [currentYear, setCurrentYear] = useState<string>("");
   const [students, setStudents] = useState<Student[]>([]);
   const [bonuses, setBonuses] = useState<BonusRow[]>([]);
   const [registered, setRegistered] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // edit dialog
-  const [editTeacher, setEditTeacher] = useState<string | null>(null);
+  const [editTeacher, setEditTeacher] = useState<string>("");
   const [editName, setEditName] = useState("");
 
   // view students dialog
-  const [viewTeacher, setViewTeacher] = useState<string | null>(null);
+  const [viewTeacher, setViewTeacher] = useState<string>("");
 
   // bonus dialog
-  const [bonusTeacher, setBonusTeacher] = useState<string | null>(null);
+  const [bonusTeacher, setBonusTeacher] = useState<string>("");
   const [bonusYear, setBonusYear] = useState("1447");
   const [bonusMonth, setBonusMonth] = useState<number>(1);
   const [bonusAmount, setBonusAmount] = useState<string>("0");
