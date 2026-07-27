@@ -455,20 +455,6 @@ const Index = () => {
               </Button>
             </Link>
 
-            <Link to="/teachers">
-              <Button variant="outline" className="gap-2">
-                <Users className="h-4 w-4" />
-                المعلمات
-              </Button>
-            </Link>
-
-            <Link to="/awards">
-              <Button variant="outline" className="gap-2">
-                <Award className="h-4 w-4" />
-                الإكراميات والجوائز
-              </Button>
-            </Link>
-
             <Button
               onClick={handleSyncFromCloud}
               disabled={syncing || !online}
