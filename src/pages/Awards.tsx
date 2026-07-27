@@ -429,7 +429,7 @@ const Awards = () => {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             <span className="text-sm">العام:</span>
-            <Select value={currentYear} onValueChange={setCurrentYear}>
+            <Select value={currentYear} onValueChange={(v) => void handleYearChange(v)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
