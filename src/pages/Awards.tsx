@@ -218,6 +218,7 @@ const Awards = () => {
       student_name: form.student_name.trim() || null,
       notes: form.notes.trim() || null,
       awarded_at: form.awarded_at,
+      funded_by: form.funded_by.trim() || null,
     };
     const { error } = editingId
       ? await supabase.from("awards").update(payload).eq("id", editingId)
@@ -396,7 +397,7 @@ const Awards = () => {
                   <td className="px-3 py-2 text-right">{i + 1}</td>
                   <td className="px-3 py-2 text-right font-medium">{a.recipient_name}</td>
                   <td className="px-3 py-2 text-center">
-                    {a.recipient_type === "teacher" ? "معلمة" : "طالبة"}
+                    {RECIPIENT_LABEL[a.recipient_type] || a.recipient_type}
                   </td>
                   {type === "khatm_bonus" && (
                     <td className="px-3 py-2 text-right">{a.student_name || "—"}</td>
