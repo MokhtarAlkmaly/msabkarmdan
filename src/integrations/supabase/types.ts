@@ -21,6 +21,7 @@ export type Database = {
           award_type: string
           awarded_at: string
           created_at: string
+          funded_by: string | null
           id: string
           item: string | null
           notes: string | null
@@ -37,6 +38,7 @@ export type Database = {
           award_type: string
           awarded_at?: string
           created_at?: string
+          funded_by?: string | null
           id?: string
           item?: string | null
           notes?: string | null
@@ -53,12 +55,142 @@ export type Database = {
           award_type?: string
           awarded_at?: string
           created_at?: string
+          funded_by?: string | null
           id?: string
           item?: string | null
           notes?: string | null
           recipient_name?: string
           recipient_type?: string
           student_name?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
+      ceremony_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          funded_by: string | null
+          id: string
+          notes: string | null
+          spent_at: string
+          updated_at: string
+          user_id: string
+          year: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          funded_by?: string | null
+          id?: string
+          notes?: string | null
+          spent_at?: string
+          updated_at?: string
+          user_id: string
+          year: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          funded_by?: string | null
+          id?: string
+          notes?: string | null
+          spent_at?: string
+          updated_at?: string
+          user_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
+      certificates: {
+        Row: {
+          cert_type: string
+          created_at: string
+          id: string
+          issued_at: string
+          notes: string | null
+          recipient_name: string
+          recipient_type: string
+          title: string
+          updated_at: string
+          user_id: string
+          year: string
+        }
+        Insert: {
+          cert_type?: string
+          created_at?: string
+          id?: string
+          issued_at?: string
+          notes?: string | null
+          recipient_name: string
+          recipient_type?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          year: string
+        }
+        Update: {
+          cert_type?: string
+          created_at?: string
+          id?: string
+          issued_at?: string
+          notes?: string | null
+          recipient_name?: string
+          recipient_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
+      donors: {
+        Row: {
+          created_at: string
+          donor_type: string
+          id: string
+          in_kind: string | null
+          name: string
+          notes: string | null
+          paid_amount: number
+          phone: string | null
+          pledged_amount: number
+          updated_at: string
+          user_id: string
+          year: string
+        }
+        Insert: {
+          created_at?: string
+          donor_type?: string
+          id?: string
+          in_kind?: string | null
+          name: string
+          notes?: string | null
+          paid_amount?: number
+          phone?: string | null
+          pledged_amount?: number
+          updated_at?: string
+          user_id: string
+          year: string
+        }
+        Update: {
+          created_at?: string
+          donor_type?: string
+          id?: string
+          in_kind?: string | null
+          name?: string
+          notes?: string | null
+          paid_amount?: number
+          phone?: string | null
+          pledged_amount?: number
           updated_at?: string
           user_id?: string
           year?: string
