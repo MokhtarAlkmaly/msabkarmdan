@@ -16,7 +16,24 @@ import { loadAllStudentsWithData, getActiveYear, setActiveYear } from "@/utils/s
 
 type AwardType = "khatm_bonus" | "ceremony" | "annual" | "certificate";
 type AwardKind = "cash" | "in_kind";
-type RecipientType = "teacher" | "student";
+type RecipientType =
+  | "teacher"
+  | "male_teacher"
+  | "student"
+  | "male_student"
+  | "orphan"
+  | "needy"
+  | "other";
+
+const RECIPIENT_LABEL: Record<RecipientType, string> = {
+  teacher: "معلمة",
+  male_teacher: "معلم",
+  student: "طالبة",
+  male_student: "طالب",
+  orphan: "يتيم/يتيمة",
+  needy: "مسكين/مسكينة",
+  other: "أخرى",
+};
 
 interface AwardRow {
   id: string;
@@ -30,6 +47,7 @@ interface AwardRow {
   student_name: string | null;
   notes: string | null;
   awarded_at: string;
+  funded_by: string | null;
 }
 
 const TYPE_LABEL: Record<AwardType, string> = {
