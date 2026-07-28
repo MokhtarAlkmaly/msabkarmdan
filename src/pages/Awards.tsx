@@ -276,7 +276,7 @@ const Awards = () => {
         else if (a.award_type === "certificate") t.certificates.push(a);
       });
 
-    const studentAwards = yearAwards.filter((a) => a.recipient_type === "student");
+    const studentAwards = yearAwards.filter((a) => a.recipient_type !== "teacher");
 
     const teachersHtml = Array.from(teacherMap.entries())
       .sort((a, b) => a[0].localeCompare(b[0], "ar"))
