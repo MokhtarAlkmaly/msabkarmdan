@@ -6,7 +6,7 @@ import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw, Users, Award } from "lucide-react";
+import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw, Users, Award, HeartHandshake, Receipt, ScrollText } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
@@ -401,6 +401,24 @@ const Index = () => {
               <Button className="w-full gap-2">
                 <Award className="h-4 w-4" />
                 الإكراميات والجوائز
+              </Button>
+            </Link>
+            <Link to="/donors" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <HeartHandshake className="h-4 w-4" />
+                الداعمون
+              </Button>
+            </Link>
+            <Link to="/expenses" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <Receipt className="h-4 w-4" />
+                مصروفات الحفل
+              </Button>
+            </Link>
+            <Link to="/certificates" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <ScrollText className="h-4 w-4" />
+                الشهادات
               </Button>
             </Link>
           </div>

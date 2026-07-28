@@ -12,6 +12,9 @@ import Install from "./pages/Install";
 import Media from "./pages/Media";
 import Teachers from "./pages/Teachers";
 import Awards from "./pages/Awards";
+import Donors from "./pages/Donors";
+import Expenses from "./pages/Expenses";
+import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
 import OAuthConsent from "./pages/OAuthConsent";
 
@@ -49,6 +52,9 @@ const App = () => (
             <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
             <Route path="/teachers" element={<ProtectedRoute><Teachers /></ProtectedRoute>} />
             <Route path="/awards" element={<ProtectedRoute><Awards /></ProtectedRoute>} />
+            <Route path="/donors" element={<ProtectedRoute><Donors /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+            <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={<NotFound />} />

@@ -16,7 +16,24 @@ import { loadAllStudentsWithData, getActiveYear, setActiveYear } from "@/utils/s
 
 type AwardType = "khatm_bonus" | "ceremony" | "annual" | "certificate";
 type AwardKind = "cash" | "in_kind";
-type RecipientType = "teacher" | "student";
+type RecipientType =
+  | "teacher"
+  | "male_teacher"
+  | "student"
+  | "male_student"
+  | "orphan"
+  | "needy"
+  | "other";
+
+const RECIPIENT_LABEL: Record<RecipientType, string> = {
+  teacher: "معلمة",
+  male_teacher: "معلم",
+  student: "طالبة",
+  male_student: "طالب",
+  orphan: "يتيم/يتيمة",
+  needy: "مسكين/مسكينة",
+  other: "أخرى",
+};
 
 interface AwardRow {
   id: string;
@@ -30,6 +47,7 @@ interface AwardRow {
   student_name: string | null;
   notes: string | null;
   awarded_at: string;
+  funded_by: string | null;
 }
 
 const TYPE_LABEL: Record<AwardType, string> = {
@@ -56,6 +74,7 @@ const Awards = () => {
   const [currentYear, setCurrentYear] = useState<string>("");
   const [awards, setAwards] = useState<AwardRow[]>([]);
   const [teachers, setTeachers] = useState<string[]>([]);
+  const [donors, setDonors] = useState<string[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AwardType>("khatm_bonus");
@@ -74,6 +93,7 @@ const Awards = () => {
     item: "",
     notes: "",
     awarded_at: new Date().toISOString().slice(0, 10),
+    funded_by: "",
   });
 
   const loadAll = useCallback(async () => {
@@ -96,6 +116,13 @@ const Awards = () => {
       if (t) merged.add(t);
     });
     setTeachers(Array.from(merged).sort((a, b) => a.localeCompare(b, "ar")));
+    const { data: donorData } = await supabase
+      .from("donors")
+      .select("name")
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .order("name");
+    setDonors(((donorData as { name: string }[]) || []).map((d) => d.name));
     const { data: awardData } = await supabase
       .from("awards")
       .select("*")
@@ -150,6 +177,7 @@ const Awards = () => {
       item: "",
       notes: "",
       awarded_at: new Date().toISOString().slice(0, 10),
+      funded_by: "",
     });
     setDialogOpen(true);
   };
@@ -167,6 +195,7 @@ const Awards = () => {
       item: a.item || "",
       notes: a.notes || "",
       awarded_at: a.awarded_at,
+      funded_by: a.funded_by || "",
     });
     setDialogOpen(true);
   };
@@ -189,6 +218,7 @@ const Awards = () => {
       student_name: form.student_name.trim() || null,
       notes: form.notes.trim() || null,
       awarded_at: form.awarded_at,
+      funded_by: form.funded_by.trim() || null,
     };
     const { error } = editingId
       ? await supabase.from("awards").update(payload).eq("id", editingId)
@@ -246,7 +276,7 @@ const Awards = () => {
         else if (a.award_type === "certificate") t.certificates.push(a);
       });
 
-    const studentAwards = yearAwards.filter((a) => a.recipient_type === "student");
+    const studentAwards = yearAwards.filter((a) => a.recipient_type !== "teacher");
 
     const teachersHtml = Array.from(teacherMap.entries())
       .sort((a, b) => a[0].localeCompare(b[0], "ar"))
@@ -367,7 +397,7 @@ const Awards = () => {
                   <td className="px-3 py-2 text-right">{i + 1}</td>
                   <td className="px-3 py-2 text-right font-medium">{a.recipient_name}</td>
                   <td className="px-3 py-2 text-center">
-                    {a.recipient_type === "teacher" ? "معلمة" : "طالبة"}
+                    {RECIPIENT_LABEL[a.recipient_type] || a.recipient_type}
                   </td>
                   {type === "khatm_bonus" && (
                     <td className="px-3 py-2 text-right">{a.student_name || "—"}</td>
@@ -530,8 +560,9 @@ const Awards = () => {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="teacher">معلمة</SelectItem>
-                    <SelectItem value="student">طالبة</SelectItem>
+                    {(Object.keys(RECIPIENT_LABEL) as RecipientType[]).map((k) => (
+                      <SelectItem key={k} value={k}>{RECIPIENT_LABEL[k]}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -552,9 +583,9 @@ const Awards = () => {
 
             <div>
               <label className="text-sm font-medium">
-                {form.recipient_type === "teacher" ? "اسم المعلمة" : "اسم الطالبة"}
+                اسم المستفيد ({RECIPIENT_LABEL[form.recipient_type]})
               </label>
-              {form.recipient_type === "teacher" ? (
+              {form.recipient_type === "teacher" && teachers.length > 0 ? (
                 <Select
                   value={form.recipient_name}
                   onValueChange={(v) => setForm({ ...form, recipient_name: v })}
@@ -566,7 +597,7 @@ const Awards = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
+              ) : form.recipient_type === "student" && khatimat.length > 0 ? (
                 <Select
                   value={form.recipient_name}
                   onValueChange={(v) => setForm({ ...form, recipient_name: v })}
@@ -580,7 +611,29 @@ const Awards = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              ) : (
+                <Input
+                  value={form.recipient_name}
+                  onChange={(e) => setForm({ ...form, recipient_name: e.target.value })}
+                  placeholder="اكتب الاسم"
+                />
               )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">الجهة الممولة (فاعل الخير)</label>
+              <Select
+                value={form.funded_by || "__none__"}
+                onValueChange={(v) => setForm({ ...form, funded_by: v === "__none__" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="اختياري" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— بدون تحديد —</SelectItem>
+                  {donors.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {form.award_type === "khatm_bonus" && form.recipient_type === "teacher" && (
