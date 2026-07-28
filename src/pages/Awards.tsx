@@ -177,6 +177,7 @@ const Awards = () => {
       item: "",
       notes: "",
       awarded_at: new Date().toISOString().slice(0, 10),
+      funded_by: "",
     });
     setDialogOpen(true);
   };
@@ -194,6 +195,7 @@ const Awards = () => {
       item: a.item || "",
       notes: a.notes || "",
       awarded_at: a.awarded_at,
+      funded_by: a.funded_by || "",
     });
     setDialogOpen(true);
   };
