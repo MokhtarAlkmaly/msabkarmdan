@@ -403,6 +403,24 @@ const Index = () => {
                 الإكراميات والجوائز
               </Button>
             </Link>
+            <Link to="/donors" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <HeartHandshake className="h-4 w-4" />
+                الداعمون
+              </Button>
+            </Link>
+            <Link to="/expenses" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <Receipt className="h-4 w-4" />
+                مصروفات الحفل
+              </Button>
+            </Link>
+            <Link to="/certificates" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <ScrollText className="h-4 w-4" />
+                الشهادات
+              </Button>
+            </Link>
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">
