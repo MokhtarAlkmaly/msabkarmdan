@@ -560,8 +560,9 @@ const Awards = () => {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="teacher">معلمة</SelectItem>
-                    <SelectItem value="student">طالبة</SelectItem>
+                    {(Object.keys(RECIPIENT_LABEL) as RecipientType[]).map((k) => (
+                      <SelectItem key={k} value={k}>{RECIPIENT_LABEL[k]}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -582,9 +583,9 @@ const Awards = () => {
 
             <div>
               <label className="text-sm font-medium">
-                {form.recipient_type === "teacher" ? "اسم المعلمة" : "اسم الطالبة"}
+                اسم المستفيد ({RECIPIENT_LABEL[form.recipient_type]})
               </label>
-              {form.recipient_type === "teacher" ? (
+              {form.recipient_type === "teacher" && teachers.length > 0 ? (
                 <Select
                   value={form.recipient_name}
                   onValueChange={(v) => setForm({ ...form, recipient_name: v })}
@@ -596,7 +597,7 @@ const Awards = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
+              ) : form.recipient_type === "student" && khatimat.length > 0 ? (
                 <Select
                   value={form.recipient_name}
                   onValueChange={(v) => setForm({ ...form, recipient_name: v })}
@@ -610,7 +611,29 @@ const Awards = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              ) : (
+                <Input
+                  value={form.recipient_name}
+                  onChange={(e) => setForm({ ...form, recipient_name: e.target.value })}
+                  placeholder="اكتب الاسم"
+                />
               )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">الجهة الممولة (فاعل الخير)</label>
+              <Select
+                value={form.funded_by || "__none__"}
+                onValueChange={(v) => setForm({ ...form, funded_by: v === "__none__" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="اختياري" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— بدون تحديد —</SelectItem>
+                  {donors.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {form.award_type === "khatm_bonus" && form.recipient_type === "teacher" && (
