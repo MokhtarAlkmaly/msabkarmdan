@@ -74,6 +74,7 @@ const Awards = () => {
   const [currentYear, setCurrentYear] = useState<string>("");
   const [awards, setAwards] = useState<AwardRow[]>([]);
   const [teachers, setTeachers] = useState<string[]>([]);
+  const [donors, setDonors] = useState<string[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AwardType>("khatm_bonus");
@@ -92,6 +93,7 @@ const Awards = () => {
     item: "",
     notes: "",
     awarded_at: new Date().toISOString().slice(0, 10),
+    funded_by: "",
   });
 
   const loadAll = useCallback(async () => {
@@ -114,6 +116,13 @@ const Awards = () => {
       if (t) merged.add(t);
     });
     setTeachers(Array.from(merged).sort((a, b) => a.localeCompare(b, "ar")));
+    const { data: donorData } = await supabase
+      .from("donors")
+      .select("name")
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .order("name");
+    setDonors(((donorData as { name: string }[]) || []).map((d) => d.name));
     const { data: awardData } = await supabase
       .from("awards")
       .select("*")
