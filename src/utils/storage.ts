@@ -54,6 +54,13 @@ export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> =
   if (!userId || !isOnline()) return false;
 
   try {
+    // Never overwrite local data that hasn't been uploaded yet — push first.
+    const pendingBefore = await getPendingChanges();
+    if (pendingBefore.length > 0) {
+      const pushed = await syncToCloud();
+      if (!pushed) return false;
+    }
+
     onProgress?.(0, 4, 'تحميل الطالبات');
     const [studentsRes, historyRes, yearDataRes] = await Promise.all([
       supabase.from('students').select('*').eq('user_id', userId).order('id'),
