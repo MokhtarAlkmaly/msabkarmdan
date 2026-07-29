@@ -93,7 +93,7 @@ export const TableRow = ({ student, index, currentYear, onDelete, onDirtyChange,
     <tr className="hover:bg-accent/5 transition-colors">
       <td className="border border-border p-1 text-center font-semibold">{index}</td>
       
-      <td className="border border-border p-1">
+      <td className="sticky left-0 z-[5] bg-card hover:bg-accent/5 transition-colors border border-border p-1">
         <Input value={name} onChange={(e) => updateName(e.target.value)} placeholder="الاسم" className="text-center border-0 focus-visible:ring-1" />
       </td>
 

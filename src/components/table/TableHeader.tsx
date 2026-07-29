@@ -34,7 +34,7 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
     <thead className="bg-primary text-primary-foreground sticky top-0 z-10 whitespace-normal">
       <tr>
         {sortableHeader('م', 'index', undefined, 2)}
-        {sortableHeader('اسم الطالبة', 'name', 'min-w-[200px] w-[200px]', 2)}
+        {sortableHeader('اسم الطالبة', 'name', 'sticky left-0 z-20 min-w-[200px] w-[200px]', 2)}
         {sortableHeader('المعلمة', 'teacher', 'min-w-[200px] w-[200px]', 2)}
         <th rowSpan={2} className="border border-border p-2 min-w-[80px] bg-accent/20 cursor-pointer hover:bg-accent/40 select-none transition-colors" onClick={() => onSort('baseHifz')}>
           <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">الحفظ السابق<SortIcon field="baseHifz" sortField={sortField} sortDirection={sortDirection} /></span>
