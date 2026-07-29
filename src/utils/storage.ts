@@ -182,9 +182,11 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
     await markDirty('student', 'upsert', { id: student.id });
     return student.id;
   } else {
-    // Generate a temporary ID for new students
+    // Temporary ID in a high range so it can never collide with a real cloud id
+    // (cloud ids come from a normal sequence). Remapped on first successful sync.
+    const TEMP_BASE = 1_000_000_000;
     const existing = await getCachedStudents();
-    const maxId = existing.reduce((max, s) => Math.max(max, s.id), 0);
+    const maxId = existing.reduce((max, s) => Math.max(max, s.id), TEMP_BASE);
     const newId = maxId + 1;
     await putCachedStudent({ id: newId, name: student.name, teacher: student.teacher, user_id: userId });
     await markDirty('student', 'upsert', { id: newId });
