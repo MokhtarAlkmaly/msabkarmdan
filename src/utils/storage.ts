@@ -15,18 +15,32 @@ import {
 
 // ===== Helper: get cached user =====
 let cachedUserId: string | null = null;
+let knownUserId: string | null = null;
 
 const getUserId = async (): Promise<string | null> => {
   if (cachedUserId) return cachedUserId;
   const { data: { user } } = await supabase.auth.getUser();
   cachedUserId = user?.id || null;
+  if (cachedUserId) knownUserId = cachedUserId;
   return cachedUserId;
 };
 
-supabase.auth.onAuthStateChange(() => {
-  cachedUserId = null;
-  // Clear local cache on auth change (logout/login)
-  clearAllCache().catch(console.error);
+// Only wipe the local cache when the *identity* actually changes (sign out, or a
+// different account signs in). Token refreshes / tab focus events must never
+// destroy unsynced local data.
+supabase.auth.onAuthStateChange((event, session) => {
+  const newUserId = session?.user?.id || null;
+  cachedUserId = newUserId;
+
+  const identityChanged = knownUserId !== null && newUserId !== null && knownUserId !== newUserId;
+  const signedOut = event === 'SIGNED_OUT';
+
+  if (newUserId) knownUserId = newUserId;
+
+  if (signedOut || identityChanged) {
+    knownUserId = newUserId;
+    clearAllCache().catch(console.error);
+  }
 });
 
 // ===== Online check =====
@@ -40,6 +54,13 @@ export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> =
   if (!userId || !isOnline()) return false;
 
   try {
+    // Never overwrite local data that hasn't been uploaded yet — push first.
+    const pendingBefore = await getPendingChanges();
+    if (pendingBefore.length > 0) {
+      const pushed = await syncToCloud();
+      if (!pushed) return false;
+    }
+
     onProgress?.(0, 4, 'تحميل الطالبات');
     const [studentsRes, historyRes, yearDataRes] = await Promise.all([
       supabase.from('students').select('*').eq('user_id', userId).order('id'),
@@ -161,9 +182,11 @@ export const saveStudent = async (student: { id?: number; name: string; teacher:
     await markDirty('student', 'upsert', { id: student.id });
     return student.id;
   } else {
-    // Generate a temporary ID for new students
+    // Temporary ID in a high range so it can never collide with a real cloud id
+    // (cloud ids come from a normal sequence). Remapped on first successful sync.
+    const TEMP_BASE = 1_000_000_000;
     const existing = await getCachedStudents();
-    const maxId = existing.reduce((max, s) => Math.max(max, s.id), 0);
+    const maxId = existing.reduce((max, s) => Math.max(max, s.id), TEMP_BASE);
     const newId = maxId + 1;
     await putCachedStudent({ id: newId, name: student.name, teacher: student.teacher, user_id: userId });
     await markDirty('student', 'upsert', { id: newId });
@@ -340,7 +363,17 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
 };
 
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
+let syncInFlight: Promise<boolean> | null = null;
+
 export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
+  // Prevent overlapping syncs (interval + focus + online events) which could
+  // insert the same new student twice.
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = runSyncToCloud(onProgress).finally(() => { syncInFlight = null; });
+  return syncInFlight;
+};
+
+const runSyncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
@@ -371,13 +404,17 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
     const total = pending.length + 1;
     let done = 0;
     const tick = (label?: string) => onProgress?.(++done, total, label);
+    let hadError = false;
 
     // 1) Student deletes
     const deleteIds = studentDeletes.map(p => p.ref.id).filter(id => cloudIdSet.has(id));
     if (deleteIds.length > 0) {
-      await supabase.from('students').delete().eq('user_id', userId).in('id', deleteIds);
+      const { error } = await supabase.from('students').delete().eq('user_id', userId).in('id', deleteIds);
+      if (error) { console.error('Delete students failed:', error); hadError = true; }
     }
-    for (const p of studentDeletes) { await clearPending(p.key); tick('حذف الطالبات'); }
+    if (!hadError) {
+      for (const p of studentDeletes) { await clearPending(p.key); tick('حذف الطالبات'); }
+    }
 
     // 2) Student upserts (insert new vs update existing)
     for (const p of studentUpserts) {
@@ -385,14 +422,21 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
       if (!local) { await clearPending(p.key); tick('رفع الطالبات'); continue; }
 
       if (cloudIdSet.has(local.id)) {
-        await supabase.from('students')
+        const { error } = await supabase.from('students')
           .update({ name: local.name, teacher: local.teacher })
           .eq('id', local.id).eq('user_id', userId);
+        if (error) { console.error('Update student failed:', error); hadError = true; tick('رفع الطالبات'); continue; }
       } else {
         const { data: inserted, error } = await supabase.from('students')
           .insert({ name: local.name, teacher: local.teacher, user_id: userId })
           .select('id').single();
-        if (!error && inserted && inserted.id !== local.id) {
+        if (error || !inserted) {
+          console.error('Insert student failed:', error);
+          hadError = true;
+          tick('رفع الطالبات');
+          continue;
+        }
+        if (inserted.id !== local.id) {
           const oldId = local.id;
           const newId = inserted.id;
           // Update local caches
@@ -413,7 +457,7 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
           }
           await remapPendingStudentId(oldId, newId);
           cloudIdSet.add(newId);
-        } else if (inserted) {
+        } else {
           cloudIdSet.add(inserted.id);
         }
       }
@@ -432,11 +476,15 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
         const r = allHistory.find(h => h.student_id === p.ref.student_id && h.year_key === p.ref.year_key);
         return r ? { student_id: r.student_id, user_id: userId, year_key: r.year_key, value: r.value || '0' } : null;
       }).filter(Boolean) as any[];
+      let hifzOk = true;
       for (let i = 0; i < rows.length; i += 500) {
         const chunk = rows.slice(i, i + 500);
-        await supabase.from('hifz_history').upsert(chunk, { onConflict: 'student_id,year_key' });
+        const { error } = await supabase.from('hifz_history').upsert(chunk, { onConflict: 'student_id,year_key' });
+        if (error) { console.error('Hifz upsert failed:', error); hifzOk = false; hadError = true; break; }
       }
-      for (const p of hifzPending) { await clearPending(p.key); tick('رفع سجل الحفظ'); }
+      if (hifzOk) {
+        for (const p of hifzPending) { await clearPending(p.key); tick('رفع سجل الحفظ'); }
+      }
     }
 
     // 4) Year data upserts
@@ -451,16 +499,20 @@ export const syncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => 
           status_prize: r.status_prize, rank: r.rank, teacher: r.teacher || '',
         } : null;
       }).filter(Boolean) as any[];
+      let yearOk = true;
       for (let i = 0; i < rows.length; i += 500) {
         const chunk = rows.slice(i, i + 500);
-        await supabase.from('year_data').upsert(chunk, { onConflict: 'student_id,year' });
+        const { error } = await supabase.from('year_data').upsert(chunk, { onConflict: 'student_id,year' });
+        if (error) { console.error('Year data upsert failed:', error); yearOk = false; hadError = true; break; }
       }
-      for (const p of yearPending) { await clearPending(p.key); tick('رفع بيانات الأعوام'); }
+      if (yearOk) {
+        for (const p of yearPending) { await clearPending(p.key); tick('رفع بيانات الأعوام'); }
+      }
     }
 
     await setLastSyncTime();
     tick('اكتمل');
-    return true;
+    return !hadError;
   } catch (err) {
     console.error('Sync to cloud failed:', err);
     return false;
