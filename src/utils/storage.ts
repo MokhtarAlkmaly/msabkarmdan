@@ -15,18 +15,32 @@ import {
 
 // ===== Helper: get cached user =====
 let cachedUserId: string | null = null;
+let knownUserId: string | null = null;
 
 const getUserId = async (): Promise<string | null> => {
   if (cachedUserId) return cachedUserId;
   const { data: { user } } = await supabase.auth.getUser();
   cachedUserId = user?.id || null;
+  if (cachedUserId) knownUserId = cachedUserId;
   return cachedUserId;
 };
 
-supabase.auth.onAuthStateChange(() => {
-  cachedUserId = null;
-  // Clear local cache on auth change (logout/login)
-  clearAllCache().catch(console.error);
+// Only wipe the local cache when the *identity* actually changes (sign out, or a
+// different account signs in). Token refreshes / tab focus events must never
+// destroy unsynced local data.
+supabase.auth.onAuthStateChange((event, session) => {
+  const newUserId = session?.user?.id || null;
+  cachedUserId = newUserId;
+
+  const identityChanged = knownUserId !== null && newUserId !== null && knownUserId !== newUserId;
+  const signedOut = event === 'SIGNED_OUT';
+
+  if (newUserId) knownUserId = newUserId;
+
+  if (signedOut || identityChanged) {
+    knownUserId = newUserId;
+    clearAllCache().catch(console.error);
+  }
 });
 
 // ===== Online check =====
