@@ -33,8 +33,8 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
   return (
     <thead className="bg-primary text-primary-foreground sticky top-0 z-10 whitespace-normal">
       <tr>
-        {sortableHeader('م', 'index', 'sticky top-0 z-20 bg-primary', 2)}
-        {sortableHeader('اسم الطالبة', 'name', 'sticky top-0 left-0 z-30 bg-primary min-w-[200px] w-[200px]', 2)}
+        {sortableHeader('م', 'index', 'bg-primary', 2)}
+        {sortableHeader('اسم الطالبة', 'name', 'sticky left-0 z-30 bg-primary min-w-[200px] w-[200px]', 2)}
         {sortableHeader('المعلمة', 'teacher', 'min-w-[200px] w-[200px]', 2)}
         <th rowSpan={2} className="border border-border p-2 min-w-[80px] bg-accent/20 cursor-pointer hover:bg-accent/40 select-none transition-colors" onClick={() => onSort('baseHifz')}>
           <span className="flex items-center justify-center gap-0.5 whitespace-normal text-center leading-tight">الحفظ السابق<SortIcon field="baseHifz" sortField={sortField} sortDirection={sortDirection} /></span>
