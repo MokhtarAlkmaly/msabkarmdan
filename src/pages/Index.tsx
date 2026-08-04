@@ -91,58 +91,51 @@ const Index = () => {
     };
   }, [loadTeachers]);
 
-  // Auto-sync queued offline changes
-  const autoSyncPending = useCallback(async () => {
-    if (!navigator.onLine || !user) return;
+  // No automatic cloud sync during data entry — saving/syncing happens once
+  // when the user presses "حفظ التغييرات". We only track connectivity here.
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const refreshPendingCount = useCallback(async () => {
+    if (!user) { setPendingCount(0); return; }
     try {
       const pending = await getPendingChanges();
-      if (pending.length === 0) return;
-      setSyncProgress({ current: 0, total: pending.length + 1, label: 'مزامنة العمليات المعلقة' });
-      const ok = await syncToCloud((current, total, label) =>
-        setSyncProgress({ current, total, label })
-      );
-      setSyncProgress(null);
-      if (ok) {
-        toast({
-          title: 'تمت المزامنة',
-          description: `تم رفع ${pending.length} عملية معلقة إلى السحابة`,
-        });
-        await loadData();
-      }
-    } catch (e) {
-      setSyncProgress(null);
-      console.error('Auto-sync error:', e);
-    }
-  }, [user, loadData, toast]);
+      setPendingCount(pending.length);
+    } catch { setPendingCount(0); }
+  }, [user]);
 
-  // Track online/offline + auto-sync triggers
+  useEffect(() => { void refreshPendingCount(); }, [refreshPendingCount, loading]);
+
   useEffect(() => {
-    const goOnline = () => { setOnline(true); void autoSyncPending(); };
+    const goOnline = () => setOnline(true);
     const goOffline = () => setOnline(false);
-    const onVis = () => { if (document.visibilityState === 'visible') void autoSyncPending(); };
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
-    document.addEventListener('visibilitychange', onVis);
-    void autoSyncPending();
-    const interval = window.setInterval(() => { void autoSyncPending(); }, 60000);
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
-      document.removeEventListener('visibilitychange', onVis);
-      window.clearInterval(interval);
     };
-  }, [autoSyncPending]);
+  }, []);
+
+  // Block closing/refreshing the app while there are unsaved or unsynced changes
+  useEffect(() => {
+    const hasUnsaved = isDirty || pendingCount > 0;
+    if (!hasUnsaved) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'هناك بيانات غير محفوظة أو غير مزامنة. اضغط «حفظ التغييرات» قبل الخروج.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty, pendingCount]);
 
   useEffect(() => {
     const init = async () => {
       const year = await getActiveYear();
       setCurrentYear(year);
-      // Auto-remove duplicate students silently on startup
+      // Auto-remove duplicate students silently on startup (local only — no cloud sync)
       try {
-        const merged = await mergeDuplicateStudents();
-        if (merged > 0 && navigator.onLine) {
-          await syncToCloud();
-        }
+        await mergeDuplicateStudents();
       } catch (e) {
         console.error('Auto-merge failed:', e);
       }
@@ -158,7 +151,7 @@ const Index = () => {
     setDirtyMap(prev => ({ ...prev, [studentId]: data }));
   }, []);
 
-  const handleSaveAll = async () => {
+  const handleSaveAll = async (withSync: boolean = true) => {
     if (!isDirty) return;
 
     // Prevent duplicate student names (case-insensitive, trimmed)
@@ -197,21 +190,27 @@ const Index = () => {
 
       setDirtyMap({});
 
-      // Sync to cloud with progress
-      setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
-      const synced = await syncToCloud((current, total, label) =>
-        setSyncProgress({ current, total, label })
-      );
-      setSyncProgress(null);
+      let synced = false;
+      if (withSync) {
+        // Single sync at the end of data entry
+        setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
+        synced = await syncToCloud((current, total, label) =>
+          setSyncProgress({ current, total, label })
+        );
+        setSyncProgress(null);
+      }
 
       await loadData();
+      await refreshPendingCount();
 
-      toast({
-        title: "تم الحفظ",
-        description: synced
-          ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
-          : `تم الحفظ محلياً (${entries.length} طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
-      });
+      if (withSync) {
+        toast({
+          title: "تم الحفظ",
+          description: synced
+            ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
+            : `تم الحفظ محلياً (${entries.length} طالبة) - اضغط «حفظ التغييرات» عند توفر الإنترنت`,
+        });
+      }
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -229,7 +228,7 @@ const Index = () => {
 
     const globalStudents = await loadGlobalStudents();
     await migrateYearData(year, globalStudents);
-    
+
     setCurrentYear(year);
     await setActiveYear(year);
     toast({
@@ -238,9 +237,33 @@ const Index = () => {
     });
   };
 
+  // Single manual save + sync, used by the main button
+  const handleSaveAndSync = async () => {
+    if (isDirty) {
+      await handleSaveAll(true);
+      return;
+    }
+    if (pendingCount === 0) return;
+    if (!online) {
+      toast({ title: 'لا يوجد اتصال', description: 'سيتم الرفع عند توفر الإنترنت', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
+    const ok = await syncToCloud((current, total, label) => setSyncProgress({ current, total, label }));
+    setSyncProgress(null);
+    await refreshPendingCount();
+    setSaving(false);
+    toast({
+      title: ok ? 'تمت المزامنة' : 'فشل الرفع',
+      description: ok ? 'تم رفع كل البيانات إلى السحابة' : 'حاول مرة أخرى',
+      variant: ok ? undefined : 'destructive',
+    });
+  };
+
   const addNewStudent = async () => {
     if (isDirty) {
-      await handleSaveAll();
+      await handleSaveAll(false);
       if (Object.keys(dirtyMap).length > 0) return; // save blocked (duplicates)
     }
     const newId = await saveStudent({ name: '', teacher: '' });
@@ -447,13 +470,17 @@ const Index = () => {
             </Button>
 
             <Button
-              onClick={handleSaveAll}
-              disabled={!isDirty || saving}
-              className={`gap-2 ${isDirty ? 'animate-pulse bg-green-600 hover:bg-green-700' : ''}`}
+              onClick={() => void handleSaveAndSync()}
+              disabled={(!isDirty && pendingCount === 0) || saving}
+              className={`gap-2 ${isDirty || pendingCount > 0 ? 'animate-pulse bg-green-600 hover:bg-green-700' : ''}`}
             >
               <Save className="h-4 w-4" />
-              {saving ? 'جارٍ الحفظ...' : 'حفظ التغييرات'}
-              {isDirty && <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs">{Object.keys(dirtyMap).length}</span>}
+              {saving ? 'جارٍ الحفظ والمزامنة...' : 'حفظ ومزامنة'}
+              {(isDirty || pendingCount > 0) && (
+                <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs">
+                  {Object.keys(dirtyMap).length || pendingCount}
+                </span>
+              )}
             </Button>
 
             <Button onClick={handlePrint} variant="secondary" className="gap-2">
