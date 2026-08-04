@@ -242,10 +242,6 @@ const Index = () => {
       await handleSaveAll(false);
       if (Object.keys(dirtyMap).length > 0) return; // save blocked (duplicates)
     }
-    if (isDirty) {
-      await handleSaveAll(false);
-      if (Object.keys(dirtyMap).length > 0) return; // save blocked (duplicates)
-    }
     const newId = await saveStudent({ name: '', teacher: '' });
     if (newId) {
       await loadData();
