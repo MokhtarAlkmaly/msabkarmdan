@@ -261,20 +261,6 @@ const Index = () => {
     });
   };
 
-  const unusedYearChange = async (year: string) => {
-    if (isDirty && !confirm('هناك تغييرات غير محفوظة، هل تريد المتابعة بدون حفظ؟')) return;
-
-    const globalStudents = await loadGlobalStudents();
-    await migrateYearData(year, globalStudents);
-    
-    setCurrentYear(year);
-    await setActiveYear(year);
-    toast({
-      title: "تم تغيير السنة",
-      description: `تم التبديل إلى عام ${year}هـ`,
-    });
-  };
-
   const addNewStudent = async () => {
     if (isDirty) {
       await handleSaveAll(false);
