@@ -225,7 +225,6 @@ const Index = () => {
 
   const handleYearChange = async (year: string) => {
     if (isDirty && !confirm('هناك تغييرات غير محفوظة، هل تريد المتابعة بدون حفظ؟')) return;
-    if (isDirty && !confirm('هناك تغييرات غير محفوظة، هل تريد المتابعة بدون حفظ؟')) return;
 
     const globalStudents = await loadGlobalStudents();
     await migrateYearData(year, globalStudents);
@@ -239,6 +238,10 @@ const Index = () => {
   };
 
   const addNewStudent = async () => {
+    if (isDirty) {
+      await handleSaveAll(false);
+      if (Object.keys(dirtyMap).length > 0) return; // save blocked (duplicates)
+    }
     if (isDirty) {
       await handleSaveAll(false);
       if (Object.keys(dirtyMap).length > 0) return; // save blocked (duplicates)
