@@ -151,7 +151,7 @@ const Index = () => {
     setDirtyMap(prev => ({ ...prev, [studentId]: data }));
   }, []);
 
-  const handleSaveAll = async () => {
+  const handleSaveAll = async (withSync: boolean = true) => {
     if (!isDirty) return;
 
     // Prevent duplicate student names (case-insensitive, trimmed)
@@ -190,21 +190,27 @@ const Index = () => {
 
       setDirtyMap({});
 
-      // Sync to cloud with progress
-      setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
-      const synced = await syncToCloud((current, total, label) =>
-        setSyncProgress({ current, total, label })
-      );
-      setSyncProgress(null);
+      let synced = false;
+      if (withSync) {
+        // Single sync at the end of data entry
+        setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
+        synced = await syncToCloud((current, total, label) =>
+          setSyncProgress({ current, total, label })
+        );
+        setSyncProgress(null);
+      }
 
       await loadData();
+      await refreshPendingCount();
 
-      toast({
-        title: "تم الحفظ",
-        description: synced
-          ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
-          : `تم الحفظ محلياً (${entries.length} طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
-      });
+      if (withSync) {
+        toast({
+          title: "تم الحفظ",
+          description: synced
+            ? `تم حفظ ومزامنة بيانات ${entries.length} طالبة بنجاح`
+            : `تم الحفظ محلياً (${entries.length} طالبة) - اضغط «حفظ التغييرات» عند توفر الإنترنت`,
+        });
+      }
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -233,7 +239,7 @@ const Index = () => {
 
   const addNewStudent = async () => {
     if (isDirty) {
-      await handleSaveAll();
+      await handleSaveAll(false);
       if (Object.keys(dirtyMap).length > 0) return; // save blocked (duplicates)
     }
     const newId = await saveStudent({ name: '', teacher: '' });
