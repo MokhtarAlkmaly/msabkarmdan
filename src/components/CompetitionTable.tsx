@@ -6,6 +6,7 @@ import { TableRow } from "./table/TableRow";
 import { TableFilters } from "./table/TableFilters";
 import { calculateGrade, calculateBaseHifz } from "@/utils/calculations";
 import logo from "@/assets/logo.png";
+import { esc } from "@/utils/report";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DirtyData {
@@ -231,17 +232,17 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
 
       return `<tr>
         <td>${i + 1}</td>
-        <td>${s.name}</td>
-        <td>${s.teacher}</td>
-        <td>${s.yearData?.baseHifz || '-'}</td>
-        <td>${s.yearData?.parts || '-'}</td>
-        <td>${s.yearData?.totalHifz || '-'}</td>
-        <td>${s.yearData?.annual || '-'}</td>
-        <td>${s.yearData?.recitation || '-'}</td>
-        <td>${s.yearData?.memorization || '-'}</td>
+        <td>${esc(s.name)}</td>
+        <td>${esc(s.teacher)}</td>
+        <td>${esc(s.yearData?.baseHifz || '-')}</td>
+        <td>${esc(s.yearData?.parts || '-')}</td>
+        <td>${esc(s.yearData?.totalHifz || '-')}</td>
+        <td>${esc(s.yearData?.annual || '-')}</td>
+        <td>${esc(s.yearData?.recitation || '-')}</td>
+        <td>${esc(s.yearData?.memorization || '-')}</td>
         <td>${totalScore || '-'}</td>
         <td class="${isActive ? 'active' : 'inactive'}">${isActive ? 'نشط' : 'منقطع'}</td>
-        <td>${grade || '-'}</td>
+        <td>${esc(grade || '-')}</td>
         <td>${prize.toLocaleString()}</td>
         <td>${statusPrize.toLocaleString()}</td>
       </tr>`;
@@ -251,7 +252,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
     const totalStatusPrize = filteredStudents.reduce((sum, s) => sum + (parseFloat(s.yearData?.statusPrize || '0')), 0);
 
     printWindow.document.write(`
-      <html dir="rtl"><head><title>تقرير مصفى - ${currentYear}هـ</title>
+      <html dir="rtl"><head><meta charset="utf-8"><title>تقرير مصفى - ${esc(currentYear)}هـ</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; color: #1a3a2a; }
@@ -276,9 +277,9 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
         <div class="header">
           <img src="${logo}" alt="الشعار" />
           <h1>مركز إنماء الأهلي الخيري</h1>
-          <h2>كشف المسابقة الرمضانية - ${currentYear}هـ</h2>
+          <h2>كشف المسابقة الرمضانية - ${esc(currentYear)}هـ</h2>
         </div>
-        <div class="filter-info"><strong>التصفية:</strong> ${getFilterDescription()}</div>
+        <div class="filter-info"><strong>التصفية:</strong> ${esc(getFilterDescription())}</div>
         <div class="count">عدد الطالبات: <strong>${filteredStudents.length}</strong></div>
         <table>
           <thead><tr>
