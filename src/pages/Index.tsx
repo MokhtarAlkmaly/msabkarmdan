@@ -228,6 +228,44 @@ const Index = () => {
 
     const globalStudents = await loadGlobalStudents();
     await migrateYearData(year, globalStudents);
+
+    setCurrentYear(year);
+    await setActiveYear(year);
+    toast({
+      title: "تم تغيير السنة",
+      description: `تم التبديل إلى عام ${year}هـ`,
+    });
+  };
+
+  // Single manual save + sync, used by the main button
+  const handleSaveAndSync = async () => {
+    if (isDirty) {
+      await handleSaveAll(true);
+      return;
+    }
+    if (pendingCount === 0) return;
+    if (!online) {
+      toast({ title: 'لا يوجد اتصال', description: 'سيتم الرفع عند توفر الإنترنت', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    setSyncProgress({ current: 0, total: 1, label: 'بدء الرفع' });
+    const ok = await syncToCloud((current, total, label) => setSyncProgress({ current, total, label }));
+    setSyncProgress(null);
+    await refreshPendingCount();
+    setSaving(false);
+    toast({
+      title: ok ? 'تمت المزامنة' : 'فشل الرفع',
+      description: ok ? 'تم رفع كل البيانات إلى السحابة' : 'حاول مرة أخرى',
+      variant: ok ? undefined : 'destructive',
+    });
+  };
+
+  const unusedYearChange = async (year: string) => {
+    if (isDirty && !confirm('هناك تغييرات غير محفوظة، هل تريد المتابعة بدون حفظ؟')) return;
+
+    const globalStudents = await loadGlobalStudents();
+    await migrateYearData(year, globalStudents);
     
     setCurrentYear(year);
     await setActiveYear(year);
