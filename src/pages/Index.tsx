@@ -91,58 +91,51 @@ const Index = () => {
     };
   }, [loadTeachers]);
 
-  // Auto-sync queued offline changes
-  const autoSyncPending = useCallback(async () => {
-    if (!navigator.onLine || !user) return;
+  // No automatic cloud sync during data entry — saving/syncing happens once
+  // when the user presses "حفظ التغييرات". We only track connectivity here.
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const refreshPendingCount = useCallback(async () => {
+    if (!user) { setPendingCount(0); return; }
     try {
       const pending = await getPendingChanges();
-      if (pending.length === 0) return;
-      setSyncProgress({ current: 0, total: pending.length + 1, label: 'مزامنة العمليات المعلقة' });
-      const ok = await syncToCloud((current, total, label) =>
-        setSyncProgress({ current, total, label })
-      );
-      setSyncProgress(null);
-      if (ok) {
-        toast({
-          title: 'تمت المزامنة',
-          description: `تم رفع ${pending.length} عملية معلقة إلى السحابة`,
-        });
-        await loadData();
-      }
-    } catch (e) {
-      setSyncProgress(null);
-      console.error('Auto-sync error:', e);
-    }
-  }, [user, loadData, toast]);
+      setPendingCount(pending.length);
+    } catch { setPendingCount(0); }
+  }, [user]);
 
-  // Track online/offline + auto-sync triggers
+  useEffect(() => { void refreshPendingCount(); }, [refreshPendingCount, loading]);
+
   useEffect(() => {
-    const goOnline = () => { setOnline(true); void autoSyncPending(); };
+    const goOnline = () => setOnline(true);
     const goOffline = () => setOnline(false);
-    const onVis = () => { if (document.visibilityState === 'visible') void autoSyncPending(); };
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
-    document.addEventListener('visibilitychange', onVis);
-    void autoSyncPending();
-    const interval = window.setInterval(() => { void autoSyncPending(); }, 60000);
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
-      document.removeEventListener('visibilitychange', onVis);
-      window.clearInterval(interval);
     };
-  }, [autoSyncPending]);
+  }, []);
+
+  // Block closing/refreshing the app while there are unsaved or unsynced changes
+  useEffect(() => {
+    const hasUnsaved = isDirty || pendingCount > 0;
+    if (!hasUnsaved) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'هناك بيانات غير محفوظة أو غير مزامنة. اضغط «حفظ التغييرات» قبل الخروج.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty, pendingCount]);
 
   useEffect(() => {
     const init = async () => {
       const year = await getActiveYear();
       setCurrentYear(year);
-      // Auto-remove duplicate students silently on startup
+      // Auto-remove duplicate students silently on startup (local only — no cloud sync)
       try {
-        const merged = await mergeDuplicateStudents();
-        if (merged > 0 && navigator.onLine) {
-          await syncToCloud();
-        }
+        await mergeDuplicateStudents();
       } catch (e) {
         console.error('Auto-merge failed:', e);
       }
