@@ -446,13 +446,17 @@ const Index = () => {
             </Button>
 
             <Button
-              onClick={() => void handleSaveAll(true)}
-              disabled={!isDirty || saving}
-              className={`gap-2 ${isDirty ? 'animate-pulse bg-green-600 hover:bg-green-700' : ''}`}
+              onClick={() => void handleSaveAndSync()}
+              disabled={(!isDirty && pendingCount === 0) || saving}
+              className={`gap-2 ${isDirty || pendingCount > 0 ? 'animate-pulse bg-green-600 hover:bg-green-700' : ''}`}
             >
               <Save className="h-4 w-4" />
-              {saving ? 'جارٍ الحفظ...' : 'حفظ التغييرات'}
-              {isDirty && <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs">{Object.keys(dirtyMap).length}</span>}
+              {saving ? 'جارٍ الحفظ والمزامنة...' : 'حفظ ومزامنة'}
+              {(isDirty || pendingCount > 0) && (
+                <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs">
+                  {Object.keys(dirtyMap).length || pendingCount}
+                </span>
+              )}
             </Button>
 
             <Button onClick={handlePrint} variant="secondary" className="gap-2">
