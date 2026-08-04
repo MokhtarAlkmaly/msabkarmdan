@@ -446,7 +446,7 @@ const Index = () => {
             </Button>
 
             <Button
-              onClick={handleSaveAll}
+              onClick={() => void handleSaveAll(true)}
               disabled={!isDirty || saving}
               className={`gap-2 ${isDirty ? 'animate-pulse bg-green-600 hover:bg-green-700' : ''}`}
             >
