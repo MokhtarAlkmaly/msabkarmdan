@@ -91,6 +91,35 @@ export const ImportExport = ({ onDataImported }: Props) => {
           return;
         }
 
+        // ---- تحليل رؤوس الأعمدة بشكل مرن ----
+        // نتعرف على أعمدة (حفظ جديد YEAR) و (اجمالي الحفظ الى YEAR) بأي صياغة
+        const headers = Object.keys(jsonData[0] as any);
+        const cleanHeader = (h: string) => h.toString().replace(/[\u0640_]/g, ' ').replace(/\s+/g, ' ').trim();
+        const nameHeader = headers.find(h => /^(الاسم|اسم الطالب|اسم الطالبة)/.test(cleanHeader(h)));
+        const teacherHeader = headers.find(h => /معلم/.test(cleanHeader(h)));
+        const yearCols: { header: string; year: number; cumulative: boolean }[] = [];
+        const scoreCols: { header: string; year: number; kind: 'annual' | 'recitation' | 'memorization' }[] = [];
+        for (const h of headers) {
+          const t = cleanHeader(h);
+          const m = t.match(/(14\d{2})/);
+          if (!m) continue;
+          const year = parseInt(m[1], 10);
+          if (/تلاوة/.test(t)) { scoreCols.push({ header: h, year, kind: 'recitation' }); continue; }
+          if (/سنة|سنوي/.test(t)) { scoreCols.push({ header: h, year, kind: 'annual' }); continue; }
+          if (/حفظ درجة|درجة الحفظ/.test(t)) { scoreCols.push({ header: h, year, kind: 'memorization' }); continue; }
+          if (/مجموع|تقدير|مكافأة|مكافاة/.test(t)) continue;
+          const isNew = /جديد/.test(t);
+          const isCum = /جمالي/.test(t) || t === String(year);
+          if (isNew) yearCols.push({ header: h, year, cumulative: false });
+          else if (isCum) yearCols.push({ header: h, year, cumulative: true });
+        }
+        const years = Array.from(new Set(yearCols.map(c => c.year))).sort((a, b) => a - b);
+        const num = (v: any): number | null => {
+          if (v === undefined || v === null || v === '') return null;
+          const n = parseFloat(v.toString().replace(/[^\d.\-]/g, ''));
+          return isNaN(n) ? null : n;
+        };
+
         let importedCount = 0;
         let updatedCount = 0;
         let skippedCount = 0;
@@ -102,8 +131,9 @@ export const ImportExport = ({ onDataImported }: Props) => {
 
         for (let i = 0; i < jsonData.length; i++) {
           const row = jsonData[i] as any;
-          const name = row['الاسم']?.toString().trim();
+          const name = (nameHeader ? row[nameHeader] : row['الاسم'])?.toString().trim();
           if (!name) { setImportProgress({ current: i + 1, total: jsonData.length }); continue; }
+          const teacher = teacherHeader ? (row[teacherHeader]?.toString().trim() || '') : '';
 
           const nameKey = norm(name);
           // Skip duplicates within same file
@@ -118,33 +148,63 @@ export const ImportExport = ({ onDataImported }: Props) => {
           let studentId: number;
 
           if (!student) {
-            const newId = await saveStudent({ name, teacher: '' });
+            const newId = await saveStudent({ name, teacher });
             if (!newId) { setImportProgress({ current: i + 1, total: jsonData.length }); continue; }
             studentId = newId;
-            existingStudents.push({ id: newId, name, teacher: '' });
+            existingStudents.push({ id: newId, name, teacher });
             importedCount++;
           } else {
             studentId = student.id;
+            if (teacher && norm(student.teacher) !== norm(teacher)) {
+              await saveStudent({ id: student.id, name: student.name, teacher });
+              student.teacher = teacher;
+            }
             updatedCount++;
           }
 
-          const history = await loadHifzHistory(studentId);
-          if (row['حفظ_1441']) history.h1441 = row['حفظ_1441'].toString();
-          if (row['حفظ_1442']) history.h1442 = row['حفظ_1442'].toString();
-          if (row['حفظ_1443']) history.h1443 = row['حفظ_1443'].toString();
-          if (row['حفظ_1444']) history.h1444 = row['حفظ_1444'].toString();
-          if (row['حفظ_1445']) history.h1445 = row['حفظ_1445'].toString();
-          if (row['حفظ_1446']) history.h1446 = row['حفظ_1446'].toString();
-          await saveHifzHistory(studentId, history);
+          // ---- استخراج الحفظ الجديد لكل عام من الإجماليات التراكمية ----
+          // الإجمالي لأي عام = إجمالي العام السابق + الحفظ الجديد
+          const increments: Record<number, number> = {};
+          const touched = new Set<number>();
+          let prevCum = 0;
+          for (const year of years) {
+            const cumCol = yearCols.find(c => c.year === year && c.cumulative);
+            const newCol = yearCols.find(c => c.year === year && !c.cumulative);
+            const cum = cumCol ? num(row[cumCol.header]) : null;
+            const fresh = newCol ? num(row[newCol.header]) : null;
+            let inc = 0;
+            if (cum !== null) {
+              inc = Math.max(0, cum - prevCum);
+              prevCum = Math.max(cum, prevCum);
+              touched.add(year);
+            } else if (fresh !== null) {
+              inc = Math.max(0, fresh);
+              prevCum += inc;
+              touched.add(year);
+            }
+            increments[year] = inc;
+          }
 
-          for (let year = 1442; year <= 1450; year++) {
-            let hasData = false;
+          if (touched.size) {
+            const history = await loadHifzHistory(studentId);
+            for (const year of years) {
+              if (!touched.has(year)) continue;
+              history[`h${year}`] = increments[year].toString();
+            }
+            await saveHifzHistory(studentId, history);
+          }
+
+          const scoreYears = new Set(scoreCols.map(c => c.year));
+          for (const year of new Set<number>([...touched, ...scoreYears])) {
+            if (year < 1442) continue;
             const yearData = await loadYearData(year.toString(), studentId);
-            if (row[`حفظ_جديد_${year}`] !== undefined) { yearData.parts = row[`حفظ_جديد_${year}`].toString(); hasData = true; }
-            if (row[`سنة_${year}`] !== undefined) { yearData.annual = row[`سنة_${year}`].toString(); hasData = true; }
-            if (row[`تلاوة_${year}`] !== undefined) { yearData.recitation = row[`تلاوة_${year}`].toString(); hasData = true; }
-            if (row[`حفظ_درجة_${year}`] !== undefined) { yearData.memorization = row[`حفظ_درجة_${year}`].toString(); hasData = true; }
-            if (hasData) await saveYearData(year.toString(), studentId, yearData);
+            if (touched.has(year)) yearData.parts = increments[year] ? increments[year].toString() : '0';
+            for (const col of scoreCols.filter(c => c.year === year)) {
+              const v = row[col.header];
+              if (v !== undefined && v !== null && v !== '') yearData[col.kind] = v.toString();
+            }
+            if (teacher) yearData.teacher = teacher;
+            await saveYearData(year.toString(), studentId, yearData);
           }
           setImportProgress({ current: i + 1, total: jsonData.length });
         }
@@ -176,15 +236,27 @@ export const ImportExport = ({ onDataImported }: Props) => {
 
   const downloadTemplate = () => {
     const templateData = [{
+      'م': 1,
       'الاسم': 'مثال: فاطمة أحمد',
-      'حفظ_1441': '3', 'حفظ_1442': '5', 'حفظ_1443': '10',
-      'حفظ_1444': '15', 'حفظ_1445': '20', 'حفظ_1446': '25',
-      'حفظ_جديد_1447': '5', 'سنة_1447': '18', 'تلاوة_1447': '19', 'حفظ_درجة_1447': '55',
+      'اسم المعلم /ة': 'اصاله',
+      '1441': 1,
+      'حفظ جديد 1442': 2,
+      'اجمالي الحفظ الى 1442': 3,
+      'حفظ جديد 1443': 2,
+      'اجمالي الحفظ الى 1443': 5,
+      'حفظ جديد 1444': 3,
+      'اجمالي الحفظ الى 1444': 8,
+      'حفظ جديد 1445': 2,
+      'اجمالي الحفظ الى 1445': 10,
+      'حفظ جديد 1446': 5,
+      'اجمالي الحفظ الى 1446': 15,
+      'حفظ جديد 1447': 5,
+      'اجمالي الحفظ الى 1447': 20,
     }];
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "قالب البيانات");
-    worksheet['!cols'] = Array(11).fill({ wch: 20 });
+    worksheet['!cols'] = Array(16).fill({ wch: 22 });
     XLSX.writeFile(workbook, 'قالب_استيراد_البيانات.xlsx');
     toast({ title: "تم تنزيل القالب", description: "يمكنك تعبئة البيانات في القالب ثم استيراده" });
   };
