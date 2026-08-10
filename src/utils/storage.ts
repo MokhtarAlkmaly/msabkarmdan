@@ -17,7 +17,26 @@ import {
 let cachedUserId: string | null = null;
 let knownUserId: string | null = null;
 
+// ===== Admin "view as center" mode (read-only) =====
+const VIEW_AS_KEY = 'viewAsUserId';
+
+export const getViewAsUserId = (): string | null => {
+  try { return localStorage.getItem(VIEW_AS_KEY); } catch { return null; }
+};
+
+export const isViewingOtherCenter = (): boolean => !!getViewAsUserId();
+
+export const setViewAsUserId = async (userId: string | null) => {
+  try {
+    if (userId) localStorage.setItem(VIEW_AS_KEY, userId);
+    else localStorage.removeItem(VIEW_AS_KEY);
+  } catch { /* ignore */ }
+  await clearAllCache().catch(console.error);
+};
+
 const getUserId = async (): Promise<string | null> => {
+  const viewAs = getViewAsUserId();
+  if (viewAs) return viewAs;
   if (cachedUserId) return cachedUserId;
   const { data: { user } } = await supabase.auth.getUser();
   cachedUserId = user?.id || null;
