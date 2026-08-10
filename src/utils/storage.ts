@@ -17,7 +17,26 @@ import {
 let cachedUserId: string | null = null;
 let knownUserId: string | null = null;
 
+// ===== Admin "view as center" mode (read-only) =====
+const VIEW_AS_KEY = 'viewAsUserId';
+
+export const getViewAsUserId = (): string | null => {
+  try { return localStorage.getItem(VIEW_AS_KEY); } catch { return null; }
+};
+
+export const isViewingOtherCenter = (): boolean => !!getViewAsUserId();
+
+export const setViewAsUserId = async (userId: string | null) => {
+  try {
+    if (userId) localStorage.setItem(VIEW_AS_KEY, userId);
+    else localStorage.removeItem(VIEW_AS_KEY);
+  } catch { /* ignore */ }
+  await clearAllCache().catch(console.error);
+};
+
 const getUserId = async (): Promise<string | null> => {
+  const viewAs = getViewAsUserId();
+  if (viewAs) return viewAs;
   if (cachedUserId) return cachedUserId;
   const { data: { user } } = await supabase.auth.getUser();
   cachedUserId = user?.id || null;
@@ -214,6 +233,8 @@ export const deleteAllStudents = async () => {
   const { clearStore } = await import("./localDB");
   const { clearAllPending } = await import("./localDB");
 
+  if (isViewingOtherCenter()) return;
+
   // Try to wipe cloud first if online & authenticated
   const userId = await getUserId();
   if (userId && isOnline()) {
@@ -338,7 +359,7 @@ export const setActiveYear = async (year: string) => {
   await setCachedSetting('active_year', year);
   // Also save to cloud if online
   const userId = await getUserId();
-  if (userId && isOnline()) {
+  if (userId && isOnline() && !isViewingOtherCenter()) {
     await supabase
       .from('user_settings')
       .upsert({ user_id: userId, active_year: year }, { onConflict: 'user_id' });
@@ -377,6 +398,8 @@ const runSyncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
+  // Admin viewing another center: never write to their data
+  if (isViewingOtherCenter()) return false;
 
   try {
     const pending = await getPendingChanges();

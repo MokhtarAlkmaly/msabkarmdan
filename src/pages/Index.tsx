@@ -26,6 +26,8 @@ import {
 import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { Settings as SettingsIcon, Building2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,6 +50,8 @@ const Index = () => {
   const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
+  const { profile, logoUrl: centerLogo, isAdmin } = useProfile();
+  const centerName = profile?.center_name || "مركز إنماء الأهلي الخيري";
 
   const isDirty = Object.keys(dirtyMap).length > 0;
 
@@ -374,12 +378,12 @@ const Index = () => {
       <header className="bg-primary text-primary-foreground py-6 px-4 print:py-4">
         <div className="container mx-auto">
           <div className="flex flex-col items-center mb-4">
-            <img src={logo} alt="مركز إنماء الأهلي الخيري" className="h-24 w-auto mb-4 print:h-20" />
+            <img src={centerLogo || logo} alt={centerName} className="h-24 w-auto mb-4 print:h-20" />
           </div>
           
           <div className="flex justify-between items-start mb-4 print:mb-2">
             <div className="text-sm text-primary-foreground/90">
-              <div className="font-bold">مركز إنماء الأهلي الخيري</div>
+              <div className="font-bold">{centerName}</div>
               <div>الإشراف - شرعب الرونة</div>
             </div>
 
@@ -444,6 +448,20 @@ const Index = () => {
                 الشهادات
               </Button>
             </Link>
+            <Link to="/settings" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="outline">
+                <SettingsIcon className="h-4 w-4" />
+                إعدادات المركز
+              </Button>
+            </Link>
+            {isAdmin && (
+              <Link to="/admin" className="w-full sm:w-auto">
+                <Button className="w-full gap-2" variant="outline">
+                  <Building2 className="h-4 w-4" />
+                  الإدارة العامة
+                </Button>
+              </Link>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">
