@@ -233,6 +233,8 @@ export const deleteAllStudents = async () => {
   const { clearStore } = await import("./localDB");
   const { clearAllPending } = await import("./localDB");
 
+  if (isViewingOtherCenter()) return;
+
   // Try to wipe cloud first if online & authenticated
   const userId = await getUserId();
   if (userId && isOnline()) {
@@ -357,7 +359,7 @@ export const setActiveYear = async (year: string) => {
   await setCachedSetting('active_year', year);
   // Also save to cloud if online
   const userId = await getUserId();
-  if (userId && isOnline()) {
+  if (userId && isOnline() && !isViewingOtherCenter()) {
     await supabase
       .from('user_settings')
       .upsert({ user_id: userId, active_year: year }, { onConflict: 'user_id' });
@@ -396,6 +398,8 @@ const runSyncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!userId) return false;
   if (!isOnline()) return false;
+  // Admin viewing another center: never write to their data
+  if (isViewingOtherCenter()) return false;
 
   try {
     const pending = await getPendingChanges();
