@@ -17,6 +17,9 @@ import Expenses from "./pages/Expenses";
 import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
 import OAuthConsent from "./pages/OAuthConsent";
+import Admin from "./pages/Admin";
+import Settings from "./pages/Settings";
+import ViewAsBanner from "./components/ViewAsBanner";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +49,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ViewAsBanner />
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -55,6 +59,8 @@ const App = () => (
             <Route path="/donors" element={<ProtectedRoute><Donors /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
             <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={<NotFound />} />
