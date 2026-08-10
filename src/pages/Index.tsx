@@ -448,6 +448,20 @@ const Index = () => {
                 الشهادات
               </Button>
             </Link>
+            <Link to="/settings" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="outline">
+                <SettingsIcon className="h-4 w-4" />
+                إعدادات المركز
+              </Button>
+            </Link>
+            {isAdmin && (
+              <Link to="/admin" className="w-full sm:w-auto">
+                <Button className="w-full gap-2" variant="outline">
+                  <Building2 className="h-4 w-4" />
+                  الإدارة العامة
+                </Button>
+              </Link>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">
