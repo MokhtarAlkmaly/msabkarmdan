@@ -26,6 +26,8 @@ import {
 import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { Settings as SettingsIcon, Building2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,6 +50,8 @@ const Index = () => {
   const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
+  const { profile, logoUrl: centerLogo, isAdmin } = useProfile();
+  const centerName = profile?.center_name || "مركز إنماء الأهلي الخيري";
 
   const isDirty = Object.keys(dirtyMap).length > 0;
 
