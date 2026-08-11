@@ -13,7 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Eye, KeyRound, Lock, Unlock, UserPlus, Building2 } from "lucide-react";
+import { ArrowRight, Eye, KeyRound, Lock, Unlock, UserPlus, Building2, Trash2 } from "lucide-react";
 
 interface Row {
   user_id: string;
@@ -40,6 +40,7 @@ const Admin = () => {
 
   const [resetFor, setResetFor] = useState<Row | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [deleteFor, setDeleteFor] = useState<Row | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,6 +91,15 @@ const Admin = () => {
   const toggleActive = async (row: Row) => {
     const ok = await call({ action: "set_active", user_id: row.user_id, is_active: !row.is_active });
     if (ok) load();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteFor) return;
+    const ok = await call({ action: "delete", user_id: deleteFor.user_id });
+    if (!ok) return;
+    toast({ title: "تم حذف الحساب", description: deleteFor.email ?? deleteFor.center_name });
+    setDeleteFor(null);
+    load();
   };
 
   const viewAs = async (row: Row) => {
@@ -185,6 +195,12 @@ const Admin = () => {
                           {row.is_active ? "إيقاف" : "تنشيط"}
                         </Button>
                       )}
+                      {row.user_id !== user?.id && (
+                        <Button size="sm" variant="destructive" className="gap-1" disabled={busy} onClick={() => setDeleteFor(row)}>
+                          <Trash2 className="h-3 w-3" />
+                          حذف
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -234,6 +250,21 @@ const Admin = () => {
           </div>
           <DialogFooter>
             <Button onClick={handleReset} disabled={busy}>تعيين</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteFor} onOpenChange={(o) => !o && setDeleteFor(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>حذف الحساب — {deleteFor?.center_name}</DialogTitle>
+            <DialogDescription>
+              سيتم حذف الحساب وكل بياناته نهائيًا ولا يمكن التراجع عن هذه العملية.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteFor(null)} disabled={busy}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={busy}>تأكيد الحذف</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
