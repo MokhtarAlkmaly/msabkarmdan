@@ -14,6 +14,7 @@ import Teachers from "./pages/Teachers";
 import Awards from "./pages/Awards";
 import Donors from "./pages/Donors";
 import Expenses from "./pages/Expenses";
+import Statistics from "./pages/Statistics";
 import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
 import OAuthConsent from "./pages/OAuthConsent";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/donors" element={<ProtectedRoute><Donors /></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
             <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
+            <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
