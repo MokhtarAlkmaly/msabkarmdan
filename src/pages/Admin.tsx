@@ -253,6 +253,21 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!deleteFor} onOpenChange={(o) => !o && setDeleteFor(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>حذف الحساب — {deleteFor?.center_name}</DialogTitle>
+            <DialogDescription>
+              سيتم حذف الحساب وكل بياناته نهائيًا ولا يمكن التراجع عن هذه العملية.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteFor(null)} disabled={busy}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={busy}>تأكيد الحذف</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
