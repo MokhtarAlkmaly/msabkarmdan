@@ -63,6 +63,20 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'set_active') {
+      // fallthrough below
+    }
+
+    if (action === 'delete') {
+      const userId = String(body?.user_id ?? '')
+      if (!userId) return json({ error: 'معرّف المستخدم مطلوب' }, 400)
+      if (userId === user.id) return json({ error: 'لا يمكنك حذف حسابك الخاص' }, 400)
+      const { error } = await admin.auth.admin.deleteUser(userId)
+      if (error) return json({ error: error.message }, 400)
+      await admin.from('profiles').delete().eq('user_id', userId)
+      return json({ ok: true })
+    }
+
+    if (action === 'set_active') {
       const userId = String(body?.user_id ?? '')
       const isActive = Boolean(body?.is_active)
       if (!userId) return json({ error: 'معرّف المستخدم مطلوب' }, 400)
