@@ -62,10 +62,6 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
 
-    if (action === 'set_active') {
-      // fallthrough below
-    }
-
     if (action === 'delete') {
       const userId = String(body?.user_id ?? '')
       if (!userId) return json({ error: 'معرّف المستخدم مطلوب' }, 400)
