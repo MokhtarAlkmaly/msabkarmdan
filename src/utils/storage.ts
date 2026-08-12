@@ -384,8 +384,13 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
     const previousParts = parseFloat(previousYearData.parts) || 0;
     if (previousParts > 0) {
       const historyKey = `h${previousYear}`;
-      history[historyKey] = previousParts.toString();
-      await saveHifzHistory(student.id, history);
+      const nextValue = previousParts.toString();
+      // Only write (and queue a sync) when the value actually changes, otherwise
+      // simply switching years would mark everything as unsaved.
+      if ((history[historyKey] ?? '') !== nextValue) {
+        history[historyKey] = nextValue;
+        await saveHifzHistory(student.id, { [historyKey]: nextValue });
+      }
     }
   }
 };
