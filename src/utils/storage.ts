@@ -26,6 +26,13 @@ export const getViewAsUserId = (): string | null => {
 
 export const isViewingOtherCenter = (): boolean => !!getViewAsUserId();
 
+// Never queue local changes for upload while an admin is viewing another
+// center (read-only mode) — that data belongs to someone else.
+const markDirty: typeof markDirtyRaw = (...args) => {
+  if (isViewingOtherCenter()) return Promise.resolve() as ReturnType<typeof markDirtyRaw>;
+  return markDirtyRaw(...args);
+};
+
 export const setViewAsUserId = async (userId: string | null) => {
   try {
     if (userId) localStorage.setItem(VIEW_AS_KEY, userId);
