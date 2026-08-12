@@ -9,7 +9,7 @@ import {
   CachedStudent, CachedHifzRow, CachedYearData,
 } from "./localDB";
 import {
-  markDirty, getPendingChanges, clearPending, clearAllPending,
+  markDirty as markDirtyRaw, getPendingChanges, clearPending, clearAllPending,
   remapPendingStudentId,
 } from "./localDB";
 
