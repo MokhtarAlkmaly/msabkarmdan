@@ -231,11 +231,17 @@ const Index = () => {
   const handleYearChange = async (year: string) => {
     if (isDirty && !confirm('هناك تغييرات غير محفوظة، هل تريد المتابعة بدون حفظ؟')) return;
 
-    const globalStudents = await loadGlobalStudents();
-    await migrateYearData(year, globalStudents);
-
+    // Switch immediately so the UI feels instant; heavy work runs after.
     setCurrentYear(year);
-    await setActiveYear(year);
+    void setActiveYear(year);
+    void (async () => {
+      try {
+        const globalStudents = await loadGlobalStudents();
+        await migrateYearData(year, globalStudents);
+      } catch (e) {
+        console.error('migrateYearData failed:', e);
+      }
+    })();
     toast({
       title: "تم تغيير السنة",
       description: `تم التبديل إلى عام ${year}هـ`,
