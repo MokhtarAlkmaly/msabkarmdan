@@ -386,23 +386,38 @@ export const setActiveYear = async (year: string) => {
 export const migrateYearData = async (newYear: string, students: { id: number }[]) => {
   const newYearNum = parseInt(newYear);
   const previousYear = newYearNum - 1;
+  const historyKey = `h${previousYear}`;
 
-  for (const student of students) {
-    const history = await loadHifzHistory(student.id);
-    const previousYearData = await loadYearData(previousYear.toString(), student.id);
+  // Read the local cache ONCE (previously this ran two full IndexedDB scans per
+  // student, which made switching years very slow on large lists).
+  const [allHistory, allYearData] = await Promise.all([
+    getCachedHifzHistory(),
+    getCachedYearData(),
+  ]);
 
-    const previousParts = parseFloat(previousYearData.parts) || 0;
-    if (previousParts > 0) {
-      const historyKey = `h${previousYear}`;
-      const nextValue = previousParts.toString();
-      // Only write (and queue a sync) when the value actually changes, otherwise
-      // simply switching years would mark everything as unsaved.
-      if ((history[historyKey] ?? '') !== nextValue) {
-        history[historyKey] = nextValue;
-        await saveHifzHistory(student.id, { [historyKey]: nextValue });
-      }
-    }
+  const historyValue = new Map<number, string>();
+  for (const r of allHistory) {
+    if (r.year_key === historyKey) historyValue.set(r.student_id, r.value);
   }
+
+  const prevParts = new Map<number, string>();
+  const prevYearStr = previousYear.toString();
+  for (const r of allYearData) {
+    if (r.year === prevYearStr) prevParts.set(r.student_id, r.parts);
+  }
+
+  const writes: Promise<unknown>[] = [];
+  for (const student of students) {
+    const parts = parseFloat(prevParts.get(student.id) || '') || 0;
+    if (parts <= 0) continue;
+    const nextValue = parts.toString();
+    // Only write (and queue a sync) when the value actually changes, otherwise
+    // simply switching years would mark everything as unsaved.
+    if ((historyValue.get(student.id) ?? '') === nextValue) continue;
+    writes.push(putCachedHifzRow({ student_id: student.id, year_key: historyKey, value: nextValue }));
+    writes.push(markDirty('hifz', 'upsert', { student_id: student.id, year_key: historyKey }));
+  }
+  await Promise.all(writes);
 };
 
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
