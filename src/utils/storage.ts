@@ -374,12 +374,13 @@ export const getActiveYear = async (): Promise<string> => {
 
 export const setActiveYear = async (year: string) => {
   await setCachedSetting('active_year', year);
-  // Also save to cloud if online
+  // Also save to cloud if online — fire-and-forget so the UI never waits on it
   const userId = await getUserId();
   if (userId && isOnline() && !isViewingOtherCenter()) {
-    await supabase
+    void supabase
       .from('user_settings')
-      .upsert({ user_id: userId, active_year: year }, { onConflict: 'user_id' });
+      .upsert({ user_id: userId, active_year: year }, { onConflict: 'user_id' })
+      .then(({ error }) => { if (error) console.error('setActiveYear sync failed:', error); });
   }
 };
 
