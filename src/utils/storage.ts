@@ -9,7 +9,7 @@ import {
   CachedStudent, CachedHifzRow, CachedYearData,
 } from "./localDB";
 import {
-  markDirty, getPendingChanges, clearPending, clearAllPending,
+  markDirty as markDirtyRaw, getPendingChanges, clearPending, clearAllPending,
   remapPendingStudentId,
 } from "./localDB";
 
@@ -25,6 +25,13 @@ export const getViewAsUserId = (): string | null => {
 };
 
 export const isViewingOtherCenter = (): boolean => !!getViewAsUserId();
+
+// Never queue local changes for upload while an admin is viewing another
+// center (read-only mode) — that data belongs to someone else.
+const markDirty: typeof markDirtyRaw = (...args) => {
+  if (isViewingOtherCenter()) return Promise.resolve() as ReturnType<typeof markDirtyRaw>;
+  return markDirtyRaw(...args);
+};
 
 export const setViewAsUserId = async (userId: string | null) => {
   try {
@@ -265,8 +272,12 @@ export const deleteAllStudents = async () => {
 };
 
 export const saveHifzHistory = async (studentId: number, history: HifzHistory) => {
+  const cached = await getCachedHifzHistory();
   for (const [yearKey, value] of Object.entries(history)) {
-    await putCachedHifzRow({ student_id: studentId, year_key: yearKey, value: value || '0' });
+    const next = value || '0';
+    const existing = cached.find(r => r.student_id === studentId && r.year_key === yearKey);
+    if (existing && existing.value === next) continue; // nothing changed
+    await putCachedHifzRow({ student_id: studentId, year_key: yearKey, value: next });
     await markDirty('hifz', 'upsert', { student_id: studentId, year_key: yearKey });
   }
 };
@@ -281,13 +292,19 @@ export const loadHifzHistory = async (studentId: number): Promise<HifzHistory> =
 };
 
 export const saveYearData = async (year: string, studentId: number, data: YearData) => {
-  await putCachedYearData({
+  const row = {
     student_id: studentId, year,
     base_hifz: data.baseHifz, total_hifz: data.totalHifz, parts: data.parts,
     annual: data.annual, recitation: data.recitation, memorization: data.memorization,
     total: data.total, grade: data.grade, prize: data.prize,
     status_prize: data.statusPrize, rank: data.rank, teacher: data.teacher || '',
-  });
+  };
+  const allYearData = await getCachedYearData();
+  const existing = allYearData.find(r => r.student_id === studentId && r.year === year);
+  if (existing && (Object.keys(row) as (keyof typeof row)[]).every(k => (existing as any)[k] === row[k])) {
+    return; // identical to what is already stored — don't mark as unsaved
+  }
+  await putCachedYearData(row);
   await markDirty('year', 'upsert', { student_id: studentId, year });
 };
 
@@ -377,8 +394,13 @@ export const migrateYearData = async (newYear: string, students: { id: number }[
     const previousParts = parseFloat(previousYearData.parts) || 0;
     if (previousParts > 0) {
       const historyKey = `h${previousYear}`;
-      history[historyKey] = previousParts.toString();
-      await saveHifzHistory(student.id, history);
+      const nextValue = previousParts.toString();
+      // Only write (and queue a sync) when the value actually changes, otherwise
+      // simply switching years would mark everything as unsaved.
+      if ((history[historyKey] ?? '') !== nextValue) {
+        history[historyKey] = nextValue;
+        await saveHifzHistory(student.id, { [historyKey]: nextValue });
+      }
     }
   }
 };

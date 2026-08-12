@@ -22,6 +22,7 @@ import {
   syncToCloud,
   syncFromCloud,
   mergeDuplicateStudents,
+  isViewingOtherCenter,
 } from "@/utils/storage";
 import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
@@ -100,7 +101,7 @@ const Index = () => {
   const [pendingCount, setPendingCount] = useState(0);
 
   const refreshPendingCount = useCallback(async () => {
-    if (!user) { setPendingCount(0); return; }
+    if (!user || isViewingOtherCenter()) { setPendingCount(0); return; }
     try {
       const pending = await getPendingChanges();
       setPendingCount(pending.length);
