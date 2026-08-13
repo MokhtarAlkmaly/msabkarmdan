@@ -382,34 +382,40 @@ const Index = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       <InstallPrompt />
       
-      <header className="bg-primary text-primary-foreground py-6 px-4 print:py-4">
+      <header className="bg-primary text-primary-foreground py-4 sm:py-6 px-3 sm:px-4 print:py-4">
         <div className="container mx-auto">
-          <div className="flex flex-col items-center mb-4">
-            <img src={centerLogo || logo} alt={centerName} className="h-24 w-auto mb-4 print:h-20" />
+          <div className="flex flex-col items-center mb-3 sm:mb-4">
+            <img
+              src={centerLogo || logo}
+              alt={centerName}
+              className="h-14 sm:h-20 md:h-24 w-auto max-w-[70%] object-contain print:h-20"
+            />
           </div>
-          
-          <div className="flex justify-between items-start mb-4 print:mb-2">
-            <div className="text-sm text-primary-foreground/90">
-              <div className="font-bold">{centerName}</div>
+
+          <div className="text-center mb-3 print:mb-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2 print:text-2xl">
+              بسم الله الرحمن الرحيم
+            </h1>
+            <h2 className="text-base sm:text-lg md:text-xl leading-snug print:text-lg">
+              كشف المسابقة الرمضانية للعام {currentYear}هـ
+            </h2>
+          </div>
+
+          <div className="flex flex-col gap-2 text-center sm:flex-row sm:items-start sm:justify-between sm:text-start text-[11px] sm:text-sm text-primary-foreground/90">
+            <div className="min-w-0">
+              <div className="font-bold break-words">{centerName}</div>
               <div>الإشراف - شرعب الرونة</div>
             </div>
 
-            <div className="text-center flex-1">
-              <h1 className="text-3xl font-bold mb-2 print:text-2xl">بسم الله الرحمن الرحيم</h1>
-              <h2 className="text-xl print:text-lg">
-                كشف المسابقة الرمضانية للعام {currentYear}هـ
-              </h2>
-            </div>
-
-            <div className="text-sm text-left text-primary-foreground/90">
-              <div className="font-semibold">{dayName}</div>
-              <div>{hijriDate}</div>
-              <div>{currentDate}</div>
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 sm:block sm:text-left">
+              <span className="font-semibold sm:block">{dayName}</span>
+              <span className="sm:block">{hijriDate}</span>
+              <span className="sm:block">{currentDate}</span>
               <Button
                 onClick={signOut}
                 variant="ghost"
                 size="sm"
-                className="mt-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
+                className="mt-1 sm:mt-2 h-7 px-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
               >
                 <LogOut className="h-3 w-3" />
                 خروج
