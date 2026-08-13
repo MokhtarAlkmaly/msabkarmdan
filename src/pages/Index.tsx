@@ -434,7 +434,7 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 print:hidden space-y-4">
+      <div className="container mx-auto px-4 py-3 sm:py-4 print:hidden space-y-3">
         <NotificationSystem students={students} currentYear={currentYear} />
         <ImportExport onDataImported={loadData} />
 
