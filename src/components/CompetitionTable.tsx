@@ -232,8 +232,8 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
 
       return `<tr>
         <td>${i + 1}</td>
-        <td>${esc(s.name)}</td>
-        <td>${esc(s.teacher)}</td>
+        <td class="wide">${esc(s.name)}</td>
+        <td class="wide">${esc(s.teacher)}</td>
         <td>${esc(s.yearData?.baseHifz || '-')}</td>
         <td>${esc(s.yearData?.parts || '-')}</td>
         <td>${esc(s.yearData?.totalHifz || '-')}</td>
