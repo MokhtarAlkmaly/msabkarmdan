@@ -382,17 +382,17 @@ const Index = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       <InstallPrompt />
       
-      <header className="bg-primary text-primary-foreground py-4 sm:py-6 px-3 sm:px-4 print:py-4">
+      <header className="bg-primary text-primary-foreground py-2 sm:py-4 px-3 sm:px-4 print:py-3">
         <div className="container mx-auto">
-          <div className="flex flex-col items-center mb-3 sm:mb-4">
+          <div className="flex flex-col items-center mb-1 sm:mb-2">
             <img
               src={centerLogo || logo}
               alt={centerName}
-              className="h-14 sm:h-20 md:h-24 w-auto max-w-[70%] object-contain print:h-20"
+              className="h-10 sm:h-16 md:h-20 w-auto max-w-[60%] object-contain print:h-20"
             />
           </div>
 
-          <div className="text-center mb-3 print:mb-2">
+          <div className="text-center mb-1 sm:mb-2 print:mb-2">
             <h1
               className="font-bold mb-1 sm:mb-2 whitespace-nowrap leading-tight print:text-2xl"
               style={{ fontSize: "clamp(1.05rem, 5.2vw, 1.875rem)" }}
@@ -434,7 +434,7 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 print:hidden space-y-4">
+      <div className="container mx-auto px-4 py-3 sm:py-4 print:hidden space-y-3">
         <NotificationSystem students={students} currentYear={currentYear} />
         <ImportExport onDataImported={loadData} />
 
