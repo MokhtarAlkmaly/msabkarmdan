@@ -393,29 +393,38 @@ const Index = () => {
           </div>
 
           <div className="text-center mb-3 print:mb-2">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2 print:text-2xl">
+            <h1
+              className="font-bold mb-1 sm:mb-2 whitespace-nowrap leading-tight print:text-2xl"
+              style={{ fontSize: "clamp(1.05rem, 5.2vw, 1.875rem)" }}
+            >
               بسم الله الرحمن الرحيم
             </h1>
-            <h2 className="text-base sm:text-lg md:text-xl leading-snug print:text-lg">
+            <h2
+              className="whitespace-nowrap leading-tight print:text-lg"
+              style={{ fontSize: "clamp(0.75rem, 3.6vw, 1.25rem)" }}
+            >
               كشف المسابقة الرمضانية للعام {currentYear}هـ
             </h2>
           </div>
 
-          <div className="flex flex-col gap-2 text-center sm:flex-row sm:items-start sm:justify-between sm:text-start text-[11px] sm:text-sm text-primary-foreground/90">
-            <div className="min-w-0">
-              <div className="font-bold break-words">{centerName}</div>
-              <div>الإشراف - شرعب الرونة</div>
+          <div
+            className="flex flex-row items-start justify-between gap-2 text-start text-primary-foreground/90"
+            style={{ fontSize: "clamp(0.6rem, 2.4vw, 0.875rem)" }}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="font-bold truncate">{centerName}</div>
+              <div className="truncate">الإشراف - شرعب الرونة</div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 sm:block sm:text-left">
-              <span className="font-semibold sm:block">{dayName}</span>
-              <span className="sm:block">{hijriDate}</span>
-              <span className="sm:block">{currentDate}</span>
+            <div className="flex flex-col items-end text-left shrink-0">
+              <span className="font-semibold whitespace-nowrap">{dayName}</span>
+              <span className="whitespace-nowrap">{hijriDate}</span>
+              <span className="whitespace-nowrap">{currentDate}</span>
               <Button
                 onClick={signOut}
                 variant="ghost"
                 size="sm"
-                className="mt-1 sm:mt-2 h-7 px-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
+                className="mt-1 h-7 px-2 text-primary-foreground/80 hover:text-primary-foreground gap-1 print:hidden"
               >
                 <LogOut className="h-3 w-3" />
                 خروج
