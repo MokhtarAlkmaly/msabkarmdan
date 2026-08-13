@@ -382,7 +382,7 @@ const Index = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       <InstallPrompt />
       
-      <header className="bg-primary text-primary-foreground py-4 sm:py-6 px-3 sm:px-4 print:py-4">
+      <header className="bg-primary text-primary-foreground py-2 sm:py-4 px-3 sm:px-4 print:py-3">
         <div className="container mx-auto">
           <div className="flex flex-col items-center mb-3 sm:mb-4">
             <img
