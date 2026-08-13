@@ -384,11 +384,11 @@ const Index = () => {
       
       <header className="bg-primary text-primary-foreground py-2 sm:py-4 px-3 sm:px-4 print:py-3">
         <div className="container mx-auto">
-          <div className="flex flex-col items-center mb-3 sm:mb-4">
+          <div className="flex flex-col items-center mb-1 sm:mb-2">
             <img
               src={centerLogo || logo}
               alt={centerName}
-              className="h-14 sm:h-20 md:h-24 w-auto max-w-[70%] object-contain print:h-20"
+              className="h-10 sm:h-16 md:h-20 w-auto max-w-[60%] object-contain print:h-20"
             />
           </div>
 
