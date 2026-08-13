@@ -254,25 +254,33 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
     printWindow.document.write(`
       <html dir="rtl"><head><meta charset="utf-8"><title>تقرير مصفى - ${esc(currentYear)}هـ</title>
       <style>
+        @page { size: A4 landscape; margin: 8mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; color: #1a3a2a; }
+        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 10px; color: #1a3a2a; width: 100%; }
         .header { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #2d7a52; padding-bottom: 12px; }
         .header img { height: 80px; margin-bottom: 8px; }
         .header h1 { font-size: 20px; color: #2d7a52; }
         .header h2 { font-size: 16px; color: #555; margin-top: 4px; }
         .filter-info { background: #f0f7f3; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
         .filter-info strong { color: #2d7a52; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background: #2d7a52; color: white; padding: 6px 3px; border: 1px solid #1a5a38; }
-        td { padding: 5px 3px; border: 1px solid #ccc; text-align: center; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+        th { background: #2d7a52; color: white; padding: 5px 2px; border: 1px solid #1a5a38; word-wrap: break-word; }
+        td { padding: 4px 2px; border: 1px solid #ccc; text-align: center; word-wrap: break-word; }
+        th.wide, td.wide { width: 13%; text-align: right; padding-right: 5px; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
         tr:nth-child(even) { background: #f9fdfb; }
         .total-row { background: #e8f5ee !important; font-weight: bold; }
         .total-row td { border-top: 2px solid #2d7a52; }
         .active { color: #16a34a; font-weight: bold; }
         .inactive { color: #dc2626; font-weight: bold; }
+        .sign { display: flex; justify-content: space-around; margin-top: 28px; gap: 12px; page-break-inside: avoid; }
+        .sign div { text-align: center; font-size: 12px; color: #1a3a2a; flex: 1; }
+        .sign span { display: block; font-weight: bold; margin-bottom: 26px; color: #2d7a52; }
+        .sign i { display: block; border-top: 1px solid #999; padding-top: 4px; font-style: normal; color: #555; }
         .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #888; }
         .count { margin-bottom: 10px; font-size: 13px; }
-        @media print { body { padding: 10px; } @page { size: landscape; margin: 10mm; } }
+        @media print { body { padding: 0; } }
       </style></head><body>
         <div class="header">
           <img src="${logo}" alt="الشعار" />
@@ -283,7 +291,7 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
         <div class="count">عدد الطالبات: <strong>${filteredStudents.length}</strong></div>
         <table>
           <thead><tr>
-            <th>م</th><th>الاسم</th><th>المعلمة</th><th>الحفظ السابق</th><th>حفظ جديد</th>
+            <th>م</th><th class="wide">الاسم</th><th class="wide">المعلمة</th><th>الحفظ السابق</th><th>حفظ جديد</th>
             <th>الإجمالي</th><th>سنة</th><th>تلاوة</th><th>حفظ</th><th>المجموع</th>
             <th>الحالة</th><th>التقدير</th><th>المكافأة</th><th>المكافأة حسب الحالة</th>
           </tr></thead>
@@ -296,6 +304,11 @@ export const CompetitionTable = ({ students, currentYear, onUpdate, onDelete, di
             </tr>
           </tbody>
         </table>
+        <div class="sign">
+          <div><span>المعلمة</span><i>................................</i></div>
+          <div><span>المشرفة</span><i>................................</i></div>
+          <div><span>إدارة المركز</span><i>أ/ مختار الكمالي</i></div>
+        </div>
         <div class="footer">تصميم أ/ مختار الكمالي - ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
       </body></html>
     `);
