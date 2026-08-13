@@ -392,7 +392,7 @@ const Index = () => {
             />
           </div>
 
-          <div className="text-center mb-3 print:mb-2">
+          <div className="text-center mb-1 sm:mb-2 print:mb-2">
             <h1
               className="font-bold mb-1 sm:mb-2 whitespace-nowrap leading-tight print:text-2xl"
               style={{ fontSize: "clamp(1.05rem, 5.2vw, 1.875rem)" }}
