@@ -23,6 +23,7 @@ import {
   syncFromCloud,
   mergeDuplicateStudents,
   isViewingOtherCenter,
+  canonicalNameKey,
 } from "@/utils/storage";
 import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
