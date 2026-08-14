@@ -13,6 +13,8 @@ import {
   saveYearData,
   mergeDuplicateStudents,
   syncToCloud,
+  canonicalNameKey,
+  areSimilarNames,
 } from "@/utils/storage";
 import { Student } from "@/types/student";
 import { Progress } from "@/components/ui/progress";
@@ -124,7 +126,7 @@ export const ImportExport = ({ onDataImported }: Props) => {
         let updatedCount = 0;
         let skippedCount = 0;
         const existingStudents = await loadGlobalStudents();
-        const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ');
+        const norm = (s: string) => canonicalNameKey(s);
         const seenInFile = new Set<string>();
 
         setImportProgress({ current: 0, total: jsonData.length });
@@ -144,7 +146,8 @@ export const ImportExport = ({ onDataImported }: Props) => {
           }
           seenInFile.add(nameKey);
 
-          let student = existingStudents.find(s => norm(s.name) === nameKey);
+          let student = existingStudents.find(s => norm(s.name) === nameKey)
+            || existingStudents.find(s => areSimilarNames(s.name, name));
           let studentId: number;
 
           if (!student) {
