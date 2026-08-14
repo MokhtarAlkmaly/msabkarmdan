@@ -23,6 +23,7 @@ import {
   syncFromCloud,
   mergeDuplicateStudents,
   isViewingOtherCenter,
+  canonicalNameKey,
 } from "@/utils/storage";
 import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
@@ -160,7 +161,7 @@ const Index = () => {
     if (!isDirty) return;
 
     // Prevent duplicate student names (case-insensitive, trimmed)
-    const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ');
+    const norm = (s: string) => canonicalNameKey(s);
     const nameById = new Map<number, string>();
     for (const s of students) nameById.set(s.id, s.name);
     for (const [idStr, data] of Object.entries(dirtyMap)) {

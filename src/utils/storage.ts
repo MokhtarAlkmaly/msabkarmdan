@@ -585,19 +585,50 @@ export const saveGlobalStudents = async (students: Student[]) => {
   // handled per-student via saveStudent
 };
 
-// ===== Merge duplicate students by name (case-insensitive, trimmed) =====
+// ===== توحيد أسماء الطالبات (تجاهل الهمزات والتشكيل والمسافات) =====
+export const normalizeArabicName = (s: string) =>
+  (s || '')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '') // تشكيل وتطويل
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/ء/g, '')
+    .replace(/[^\u0621-\u064Aa-zA-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const nameTokens = (s: string) => normalizeArabicName(s).split(' ').filter(Boolean);
+
+// مفتاح مطابقة تام بعد التوحيد (يتجاهل المسافات أيضًا)
+export const canonicalNameKey = (s: string) => nameTokens(s).join('');
+
+// اسم ناقص (ثلاثي) يُعتبر نفس الاسم إن كان بداية الاسم الأطول
+export const areSimilarNames = (a: string, b: string) => {
+  const ta = nameTokens(a), tb = nameTokens(b);
+  if (!ta.length || !tb.length) return false;
+  if (ta.join('') === tb.join('')) return true;
+  const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  if (short.length < 3) return false;
+  return short.every((t, i) => t === long[i]);
+};
+
+// ===== Merge duplicate students by fuzzy Arabic name matching =====
 export const mergeDuplicateStudents = async (): Promise<number> => {
   const students = await getCachedStudents();
   const allHistory = await getCachedHifzHistory();
   const allYearData = await getCachedYearData();
 
-  const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ');
-  const groups: Record<string, typeof students> = {};
-  for (const s of students) {
-    const key = norm(s.name);
-    if (!key) continue;
-    (groups[key] = groups[key] || []).push(s);
+  // تجميع بالتشابه: مطابقة تامة بعد التوحيد أو اسم ناقص هو بداية اسم أطول
+  const valid = students.filter(s => nameTokens(s.name).length > 0);
+  const clusters: (typeof students)[] = [];
+  for (const s of valid) {
+    const target = clusters.find(c => c.some(m => areSimilarNames(m.name, s.name)));
+    if (target) target.push(s); else clusters.push([s]);
   }
+  const groups: Record<string, typeof students> = {};
+  clusters.forEach((c, i) => { groups[String(i)] = c; });
 
   const { putCachedHifzRow, putCachedYearData, deleteItem } = await import("./localDB");
   let mergedCount = 0;
@@ -609,6 +640,13 @@ export const mergeDuplicateStudents = async (): Promise<number> => {
     group.sort((a, b) => a.id - b.id);
     const primary = group[0];
     const dupes = group.slice(1);
+
+    // اعتماد الاسم الأكمل (الأطول) للسجل الأساسي
+    const fullest = group.reduce((a, b) => (nameTokens(b.name).length > nameTokens(a.name).length ? b : a));
+    if (fullest.name.trim() !== primary.name.trim()) {
+      await saveStudent({ id: primary.id, name: fullest.name.trim(), teacher: primary.teacher || fullest.teacher || '' });
+      primary.name = fullest.name.trim();
+    }
 
     for (const dup of dupes) {
       // Move hifz history (don't overwrite existing primary keys with empty values)
