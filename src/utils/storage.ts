@@ -679,3 +679,473 @@ export const mergeDuplicateStudents = async (): Promise<number> => {
 
   return mergedCount;
 };
+
+// ================= إضافات النسخة الجديدة =================
+import { MonthlyRecord, QuranPoint, TRACKING_MONTHS } from "@/types/student";
+import { calcPagesBetweenAsync } from "@/utils/quranData";
+import { resolveBaseHifz } from "@/utils/calculations";
+
+const canUseCloud = (userId: string | null): userId is string => !!userId && isOnline();
+
+const ensureCache = async () => {
+  const hasCache = await isCachePopulated();
+  if (!hasCache) await syncFromCloud();
+};
+
+export const emptyYearData = (): YearData => ({
+  baseHifz: '0', totalHifz: '0', parts: '', annual: '', recitation: '',
+  memorization: '', total: '0', grade: '', prize: '0', statusPrize: '', rank: '-',
+  teacher: ''
+});
+
+// ===== سجلات الإكراميات والشهادات (قراءة مباشرة من قاعدة البيانات) =====
+export interface AwardRow {
+  id: string;
+  year: string;
+  recipient_type: string;
+  recipient_name: string;
+  award_type: string;
+  award_kind: string;
+  amount: number;
+  item?: string | null;
+  student_name?: string | null;
+  notes?: string | null;
+  awarded_at: string;
+  funded_by?: string | null;
+}
+
+export interface CertificateRow {
+  id: string;
+  year: string;
+  recipient_type: string;
+  recipient_name: string;
+  cert_type: string;
+  title: string;
+  notes?: string | null;
+  issued_at: string;
+}
+
+export const loadAwards = async (year?: string): Promise<AwardRow[]> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return [];
+  let q = supabase.from('awards').select('*').eq('user_id', userId);
+  if (year) q = q.eq('year', year);
+  const { data, error } = await q.order('awarded_at', { ascending: false });
+  if (error) { console.error('loadAwards failed:', error); return []; }
+  return (data || []) as unknown as AwardRow[];
+};
+
+export const loadCertificates = async (year?: string): Promise<CertificateRow[]> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return [];
+  let q = supabase.from('certificates').select('*').eq('user_id', userId);
+  if (year) q = q.eq('year', year);
+  const { data, error } = await q.order('issued_at', { ascending: false });
+  if (error) { console.error('loadCertificates failed:', error); return []; }
+  return (data || []) as unknown as CertificateRow[];
+};
+
+// ===== استدعاء الطالبات من الأعوام السابقة =====
+export interface RecallCandidate {
+  id: number;
+  name: string;
+  teacher: string;
+  lastYear: string;
+  baseHifz: number;
+  years: string[];
+}
+
+// الطالبات الموجودات في أعوام أخرى وغير مسجّلات في العام المختار
+export const listRecallCandidates = async (year: string): Promise<RecallCandidate[]> => {
+  await ensureCache();
+  const students = await getCachedStudents();
+  const allYearData = await getCachedYearData();
+  const allHistory = await getCachedHifzHistory();
+  const yearNum = parseInt(year);
+
+  const byStudent = new Map<number, typeof allYearData>();
+  allYearData.forEach(row => {
+    const list = byStudent.get(row.student_id) || [];
+    list.push(row);
+    byStudent.set(row.student_id, list);
+  });
+
+  const historyMap: Record<number, HifzHistory> = {};
+  allHistory.forEach(row => {
+    if (!historyMap[row.student_id]) historyMap[row.student_id] = {};
+    historyMap[row.student_id][row.year_key] = row.value;
+  });
+
+  const candidates: RecallCandidate[] = [];
+  for (const s of students) {
+    const rows = byStudent.get(s.id) || [];
+    if (rows.some(r => r.year === year)) continue;
+    const previous = rows.filter(r => parseInt(r.year) < yearNum).sort((a, b) => a.year.localeCompare(b.year));
+    if (previous.length === 0) continue;
+
+    const history = { ...(historyMap[s.id] || {}) };
+    previous.forEach(r => {
+      const parts = parseFloat(r.parts) || 0;
+      if (parts > 0) {
+        const key = `h${r.year}`;
+        if ((parseFloat(history[key]) || 0) < parts) history[key] = parts.toString();
+      }
+    });
+
+    const last = previous[previous.length - 1];
+    const lastTotalHifz = parseFloat(last.total_hifz) || 0;
+    const baseHifz = resolveBaseHifz(history, yearNum, lastTotalHifz);
+
+    candidates.push({
+      id: s.id,
+      name: s.name,
+      teacher: last.teacher || s.teacher || '',
+      lastYear: last.year,
+      baseHifz,
+      years: rows.map(r => r.year).sort(),
+    });
+  }
+
+  return candidates.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+};
+
+// استدعاء طالبات من الأعوام السابقة إلى العام المختار مع ترحيل الحفظ التراكمي
+export const recallStudentsToYear = async (year: string, ids: number[]): Promise<number> => {
+  const candidates = await listRecallCandidates(year);
+  const map = new Map(candidates.map(c => [c.id, c]));
+  let added = 0;
+
+  for (const id of ids) {
+    const c = map.get(id);
+    if (!c) continue;
+    await saveYearData(year, id, {
+      ...emptyYearData(),
+      teacher: c.teacher,
+      baseHifz: c.baseHifz.toString(),
+      totalHifz: c.baseHifz.toString(),
+    });
+    added++;
+  }
+
+  return added;
+};
+
+
+// تسجيل طالبة في العام المختار (لطالبة جديدة)
+export const registerStudentInYear = async (year: string, studentId: number, teacher = '') => {
+  await saveYearData(year, studentId, { ...emptyYearData(), teacher });
+};
+
+// ================= المتابعة الشهرية =================
+// اتصال مباشر بقاعدة البيانات (بدون تخزين مؤقت أوفلاين كامل، على غرار
+// getTableFilters/setTableFilters) — يحتاج اتصال إنترنت وقت الحفظ والقراءة.
+
+
+const emptyPoint = (): QuranPoint => ({ surah: null, ayah: null });
+
+const emptyMonthlyRecord = (): MonthlyRecord => ({
+  memoFrom: emptyPoint(), memoTo: emptyPoint(), memoHifzScore: "", memoRecitationScore: "",
+  reviewFrom: emptyPoint(), reviewTo: emptyPoint(), reviewHifzScore: "", reviewRecitationScore: "",
+  attendanceScore: "", behaviorScore: "",
+});
+
+const rowToRecord = (row: any): MonthlyRecord => ({
+  memoFrom: { surah: row.memorization_from_surah ?? null, ayah: row.memorization_from_ayah ?? null },
+  memoTo: { surah: row.memorization_to_surah ?? null, ayah: row.memorization_to_ayah ?? null },
+  memoHifzScore: row.memorization_hifz_score?.toString() || "",
+  memoRecitationScore: row.memorization_recitation_score?.toString() || "",
+  reviewFrom: { surah: row.review_from_surah ?? null, ayah: row.review_from_ayah ?? null },
+  reviewTo: { surah: row.review_to_surah ?? null, ayah: row.review_to_ayah ?? null },
+  reviewHifzScore: row.review_hifz_score?.toString() || "",
+  reviewRecitationScore: row.review_recitation_score?.toString() || "",
+  attendanceScore: row.attendance_score?.toString() || "",
+  behaviorScore: row.behavior_score?.toString() || "",
+});
+
+// يحمّل سجل شهر واحد لكل الطالبات لعام معيّن (لعرض جدول شهر بعينه)
+export const loadMonthlyTrackingForMonth = async (
+  year: string,
+  month: number
+): Promise<Record<number, MonthlyRecord>> => {
+  const userId = await getUserId();
+  const result: Record<number, MonthlyRecord> = {};
+  if (!canUseCloud(userId)) return result;
+
+  const { data, error } = await supabase
+    .from('monthly_tracking')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('year', year)
+    .eq('month', month);
+
+  if (error) {
+    console.error('loadMonthlyTrackingForMonth failed:', error);
+    return result;
+  }
+
+  (data || []).forEach((row: any) => { result[row.student_id] = rowToRecord(row); });
+  return result;
+};
+
+// يحمّل كل الأشهر (1-9) لطالبة واحدة خلال عام معيّن (لعرض بطاقتها الكاملة)
+export const loadMonthlyTrackingForStudent = async (
+  year: string,
+  studentId: number
+): Promise<Record<number, MonthlyRecord>> => {
+  const userId = await getUserId();
+  const result: Record<number, MonthlyRecord> = {};
+  if (!canUseCloud(userId)) return result;
+
+  const { data, error } = await supabase
+    .from('monthly_tracking')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('year', year)
+    .eq('student_id', studentId);
+
+  if (error) {
+    console.error('loadMonthlyTrackingForStudent failed:', error);
+    return result;
+  }
+
+  (data || []).forEach((row: any) => { result[row.month] = rowToRecord(row); });
+  return result;
+};
+
+// يجيب "إلى" آخر شهر مسبوق فيه بيانات لهذي الطالبة (لكلا القسمين)
+// حتى تُستخدم تلقائياً كنقطة بداية ("من") للشهر الحالي
+export const getPreviousMonthEndPoints = async (
+  year: string,
+  studentId: number,
+  beforeMonth: number
+): Promise<{ memoFrom: QuranPoint; reviewFrom: QuranPoint }> => {
+  const all = await loadMonthlyTrackingForStudent(year, studentId);
+  for (let m = beforeMonth - 1; m >= 1; m--) {
+    const rec = all[m];
+    if (rec && (rec.memoTo.surah || rec.reviewTo.surah)) {
+      return {
+        memoFrom: rec.memoTo.surah ? rec.memoTo : emptyPoint(),
+        reviewFrom: rec.reviewTo.surah ? rec.reviewTo : emptyPoint(),
+      };
+    }
+  }
+  return { memoFrom: emptyPoint(), reviewFrom: emptyPoint() };
+};
+
+// يحفظ سجل شهر واحد لطالبة، ثم يعيد احتساب الإجماليات السنوية تلقائياً
+// ويحدّث "حفظ جديد" و"السنوية" بالجدول الرئيسي (year_data) — مع بقائها
+// قابلة للتعديل اليدوي لاحقاً (مثلاً لإضافة حفظ إضافي بعطلة رمضان قبل المسابقة).
+export const saveMonthlyRecord = async (
+  year: string,
+  studentId: number,
+  month: number,
+  record: MonthlyRecord
+): Promise<boolean> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return false;
+
+  const { error } = await supabase.from('monthly_tracking').upsert({
+    user_id: userId,
+    student_id: studentId,
+    year,
+    month,
+    memorization_from_surah: record.memoFrom.surah,
+    memorization_from_ayah: record.memoFrom.ayah,
+    memorization_to_surah: record.memoTo.surah,
+    memorization_to_ayah: record.memoTo.ayah,
+    memorization_hifz_score: parseFloat(record.memoHifzScore) || 0,
+    memorization_recitation_score: parseFloat(record.memoRecitationScore) || 0,
+    review_from_surah: record.reviewFrom.surah,
+    review_from_ayah: record.reviewFrom.ayah,
+    review_to_surah: record.reviewTo.surah,
+    review_to_ayah: record.reviewTo.ayah,
+    review_hifz_score: parseFloat(record.reviewHifzScore) || 0,
+    review_recitation_score: parseFloat(record.reviewRecitationScore) || 0,
+    attendance_score: parseFloat(record.attendanceScore) || 0,
+    behavior_score: parseFloat(record.behaviorScore) || 0,
+  }, { onConflict: 'student_id,year,month' });
+
+  if (error) {
+    console.error('saveMonthlyRecord failed:', error);
+    return false;
+  }
+
+  await recomputeAnnualFromMonthly(year, studentId);
+  return true;
+};
+
+// يعيد احتساب "حفظ جديد" (من مجموع أوجه قسم الحفظ المحسوبة تلقائياً ÷ 20)
+// و"السنوية" (متوسط السلوك+المواظبة الشهري من 20) من كل سجلات المتابعة
+// الشهرية للطالبة، ويكتبها بجدول بيانات العام الرئيسي (year_data) — القيم
+// تبقى قابلة للتعديل اليدوي بعدها (مثلاً لإضافة حفظ إضافي بعطلة رمضان).
+export const recomputeAnnualFromMonthly = async (year: string, studentId: number) => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return;
+
+  const { data, error } = await supabase
+    .from('monthly_tracking')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('year', year)
+    .eq('student_id', studentId);
+
+  if (error || !data) return;
+
+  const pagesPerRow = await Promise.all(data.map(async (r: any) => {
+    if (!r.memorization_from_surah || !r.memorization_to_surah) return 0;
+    return calcPagesBetweenAsync(
+      r.memorization_from_surah, r.memorization_from_ayah,
+      r.memorization_to_surah, r.memorization_to_ayah
+    );
+  }));
+  const totalPages = pagesPerRow.reduce((sum, p) => sum + p, 0);
+
+  const monthsWithScores = data.filter((r: any) => (parseFloat(r.attendance_score) || 0) > 0 || (parseFloat(r.behavior_score) || 0) > 0);
+  const totalMonthlyOutOf20 = data.reduce((sum: number, r: any) => sum + ((parseFloat(r.attendance_score) || 0) + (parseFloat(r.behavior_score) || 0)), 0);
+  const monthCount = monthsWithScores.length || 1;
+
+  const partsFromPages = totalPages / 20; // 20 وجه = جزء
+  const annualScore = totalMonthlyOutOf20 / monthCount; // متوسط من 20
+
+  const existing = await loadYearData(year, studentId);
+  await saveYearData(year, studentId, {
+    ...existing,
+    parts: partsFromPages > 0 ? partsFromPages.toFixed(2).replace(/\.00$/, '') : existing.parts,
+    annual: totalMonthlyOutOf20 > 0 ? annualScore.toFixed(2).replace(/\.00$/, '') : existing.annual,
+  });
+  // ادفع التحديث للسحابة فوراً حتى ينعكس بالجدول الرئيسي من أي جهاز آخر مباشرة
+  await syncToCloud();
+};
+
+// ===== إحصائيات الحفظ والمراجعة (منفصلة عن درجات المسابقة الرمضانية) =====
+// تُستخدم لترشيح: أفضل طالب/ة بالحفظ خلال شهر معيّن، وأفضل طالب/ة بالمراجعة
+export interface MonthlyRanking {
+  studentId: number;
+  memoScore: number;   // تسميع الحفظ + تلاوة الحفظ (من 40)
+  reviewScore: number; // تسميع المراجعة + تلاوة المراجعة (من 40)
+  pagesThisMonth: number;
+}
+
+export const getMonthlyRankings = async (
+  year: string,
+  month: number
+): Promise<MonthlyRanking[]> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return [];
+
+  const { data, error } = await supabase
+    .from('monthly_tracking')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('year', year)
+    .eq('month', month);
+
+  if (error || !data) return [];
+
+  return Promise.all(data.map(async (r: any) => ({
+    studentId: r.student_id,
+    memoScore: (parseFloat(r.memorization_hifz_score) || 0) + (parseFloat(r.memorization_recitation_score) || 0),
+    reviewScore: (parseFloat(r.review_hifz_score) || 0) + (parseFloat(r.review_recitation_score) || 0),
+    pagesThisMonth: r.memorization_from_surah && r.memorization_to_surah
+      ? await calcPagesBetweenAsync(r.memorization_from_surah, r.memorization_from_ayah, r.memorization_to_surah, r.memorization_to_ayah)
+      : 0,
+  })));
+};
+
+// يجيب آخر عام وشهر تم تسجيل متابعة فيهما فعلياً (لأي طالبة)، لفتح صفحة
+// المتابعة الشهرية تلقائياً على آخر نقطة توقف عندها العمل، بدل قيمة ثابتة
+export const getLatestTrackedPeriod = async (): Promise<{ year: string; month: number } | null> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return null;
+
+  const { data, error } = await supabase
+    .from('monthly_tracking')
+    .select('year, month')
+    .eq('user_id', userId)
+    .order('year', { ascending: false })
+    .order('month', { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+  return { year: data[0].year, month: data[0].month };
+};
+
+export { TRACKING_MONTHS };
+
+// ===== كشف الخاتمات =====
+// يجمع كل الطالبات اللي ختمن القرآن الكريم (30 جزء) بكل الأعوام، من كل
+// سجلات year_data — يتحدّث تلقائياً كل ما طالبة جديدة تختم بأي عام
+export interface KhatimEntry {
+  studentId: number;
+  name: string;
+  teacher: string;
+  year: string;
+  totalScore: string;
+  grade: string;
+}
+
+// يتحقق هل اسم معيّن مسجّل مسبقاً لطالبة أخرى (باستثناء رقم الطالبة الحالية
+// نفسها)، ويرجع الأعوام اللي هي مسجّلة فيها فعلياً — يُستخدم لمنع إضافة
+// طالبة "جديدة" بنفس اسم طالبة موجودة مسبقاً بعام سابق بالغلط
+export const checkGlobalDuplicateName = async (
+  name: string,
+  excludeId?: number
+): Promise<{ studentId: number; years: string[] } | null> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return null;
+
+  const normalized = (name || '').trim().replace(/\s+/g, ' ');
+  if (!normalized) return null;
+
+  const { data: matches, error } = await supabase
+    .from('students')
+    .select('id, name')
+    .eq('user_id', userId)
+    .ilike('name', normalized);
+
+  if (error || !matches) return null;
+
+  const match = matches.find((m: any) => {
+    const mNorm = (m.name || '').trim().replace(/\s+/g, ' ');
+    return mNorm.toLowerCase() === normalized.toLowerCase() && m.id !== excludeId;
+  });
+  if (!match) return null;
+
+  const { data: yearsData } = await supabase
+    .from('year_data')
+    .select('year')
+    .eq('user_id', userId)
+    .eq('student_id', match.id);
+
+  const years = Array.from(new Set((yearsData || []).map((r: any) => r.year))).sort();
+  return { studentId: match.id, years };
+};
+
+
+export const loadKhatimat = async (): Promise<KhatimEntry[]> => {
+  const userId = await getUserId();
+  if (!canUseCloud(userId)) return [];
+
+  const { data, error } = await supabase
+    .from('year_data')
+    .select('student_id, year, total_hifz, total, grade, teacher, students(name)')
+    .eq('user_id', userId);
+
+  if (error || !data) {
+    console.error('loadKhatimat failed:', error);
+    return [];
+  }
+
+  return data
+    .filter((r: any) => (parseFloat(r.total_hifz) || 0) >= 30)
+    .map((r: any) => ({
+      studentId: r.student_id,
+      name: r.students?.name || '',
+      teacher: r.teacher || '',
+      year: r.year,
+      totalScore: r.total || '0',
+      grade: r.grade || '',
+    }))
+    .sort((a, b) => a.year.localeCompare(b.year) || a.name.localeCompare(b.name, 'ar'));
+};
+
