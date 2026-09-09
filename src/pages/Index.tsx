@@ -6,6 +6,7 @@ import { CompetitionTable } from "@/components/CompetitionTable";
 import { ImportExport } from "@/components/ImportExport";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { RecallStudents } from "@/components/RecallStudents";
 import { Plus, Printer, Trash2, Calendar, LogOut, Save, Camera, Wifi, WifiOff, RefreshCw, Users, Award, HeartHandshake, Receipt, ScrollText, BarChart3 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
@@ -29,7 +30,7 @@ import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { Settings as SettingsIcon, Building2 } from "lucide-react";
+import { Settings as SettingsIcon, Building2, CalendarDays, Sparkles, Search as SearchIcon, History } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -438,6 +439,7 @@ const Index = () => {
       <div className="container mx-auto px-4 py-3 sm:py-4 print:hidden space-y-3">
         <NotificationSystem students={students} currentYear={currentYear} />
         <ImportExport onDataImported={loadData} />
+        <RecallStudents currentYear={currentYear} onRecalled={loadData} />
 
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
