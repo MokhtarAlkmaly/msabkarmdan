@@ -441,6 +441,25 @@ const Index = () => {
 
         <div className="bg-card rounded-lg border border-border p-4 space-y-4">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
+            <Link to="/monthly" className="w-full sm:w-auto">
+              <Button className="w-full gap-2">
+                <CalendarDays className="h-4 w-4" />
+                المتابعة الشهرية
+              </Button>
+            </Link>
+            <Link to="/khatimat" className="w-full sm:w-auto">
+              <Button className="w-full gap-2">
+                <Sparkles className="h-4 w-4" />
+                كشف الخاتمات
+              </Button>
+            </Link>
+            <Link to="/search" className="w-full sm:w-auto">
+              <Button className="w-full gap-2" variant="secondary">
+                <SearchIcon className="h-4 w-4" />
+                البحث الشامل
+              </Button>
+            </Link>
+
             <Link to="/teachers" className="w-full sm:w-auto">
               <Button className="w-full gap-2">
                 <Users className="h-4 w-4" />
