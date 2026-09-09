@@ -15,6 +15,10 @@ import Awards from "./pages/Awards";
 import Donors from "./pages/Donors";
 import Expenses from "./pages/Expenses";
 import Statistics from "./pages/Statistics";
+import MonthlyTracking from "./pages/MonthlyTracking";
+import MonthlyTrackingSearch from "./pages/MonthlyTrackingSearch";
+import Khatimat from "./pages/Khatimat";
+import SearchPage from "./pages/Search";
 import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
 import OAuthConsent from "./pages/OAuthConsent";
@@ -63,6 +67,10 @@ const App = () => (
             <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/monthly" element={<ProtectedRoute><MonthlyTracking /></ProtectedRoute>} />
+            <Route path="/khatimat" element={<ProtectedRoute><Khatimat /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+            <Route path="/monthly-search" element={<MonthlyTrackingSearch />} />
             <Route path="/install" element={<Install />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={<NotFound />} />
