@@ -140,8 +140,9 @@ let hafsInstance: any = null;
 
 const getHafs = async () => {
   if (!hafsInstance) {
-    const { QuranRiwaya } = await import("quran-meta");
-    hafsInstance = QuranRiwaya.hafs();
+    const mod: any = await import("quran-meta");
+    const riwaya: any = mod.QuranRiwaya;
+    hafsInstance = typeof riwaya?.hafs === "function" ? riwaya.hafs() : riwaya;
   }
   return hafsInstance;
 };
