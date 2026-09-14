@@ -381,27 +381,105 @@ export type Database = {
         }
         Relationships: []
       }
+      student_columns: {
+        Row: {
+          col_type: string
+          created_at: string
+          id: string
+          key: string
+          label: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          col_type?: string
+          created_at?: string
+          id?: string
+          key: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          col_type?: string
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_statuses: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           created_at: string
+          extra: Json
+          guardian_phone: string | null
           id: number
+          join_date_hijri: string | null
           name: string
+          prior_hifz: number
+          school_year: string | null
+          status: string | null
+          student_phone: string | null
           teacher: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          extra?: Json
+          guardian_phone?: string | null
           id?: number
+          join_date_hijri?: string | null
           name?: string
+          prior_hifz?: number
+          school_year?: string | null
+          status?: string | null
+          student_phone?: string | null
           teacher?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          extra?: Json
+          guardian_phone?: string | null
           id?: number
+          join_date_hijri?: string | null
           name?: string
+          prior_hifz?: number
+          school_year?: string | null
+          status?: string | null
+          student_phone?: string | null
           teacher?: string
           updated_at?: string
           user_id?: string
