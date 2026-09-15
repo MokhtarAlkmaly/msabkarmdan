@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import Index from "./pages/Index";
+import Students from "./pages/Students";
+import StudentProfile from "./pages/StudentProfile";
 import Auth from "./pages/Auth";
 import Install from "./pages/Install";
 import Media from "./pages/Media";
@@ -57,7 +59,9 @@ const App = () => (
           <ViewAsBanner />
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Students /></ProtectedRoute>} />
+            <Route path="/students/:id" element={<ProtectedRoute><StudentProfile /></ProtectedRoute>} />
+            <Route path="/competition" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
             <Route path="/teachers" element={<ProtectedRoute><Teachers /></ProtectedRoute>} />
             <Route path="/awards" element={<ProtectedRoute><Awards /></ProtectedRoute>} />
