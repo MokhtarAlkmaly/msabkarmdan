@@ -268,6 +268,11 @@ const Teachers = () => {
             </Select>
           </div>
           <div className="flex gap-2">
+            <Link to="/">
+              <Button variant="outline" className="gap-2">
+                <GraduationCap className="h-4 w-4" /> الطلاب
+              </Button>
+            </Link>
             <Link to="/awards">
               <Button variant="outline" className="gap-2">
                 <Award className="h-4 w-4" /> الإكراميات والجوائز
@@ -385,7 +390,11 @@ const Teachers = () => {
                 {viewStudents.map((s, i) => (
                   <tr key={s.id} className="border-t border-border">
                     <td className="px-2 py-2 text-right">{i + 1}</td>
-                    <td className="px-2 py-2 text-right font-medium">{s.name || "—"}</td>
+                    <td className="px-2 py-2 text-right font-medium">
+                      <Link to={`/students/${s.id}`} className="text-primary hover:underline">
+                        {s.name || "—"}
+                      </Link>
+                    </td>
                     <td className="px-2 py-2 text-center">{s.yearData?.parts || "—"}</td>
                     <td className="px-2 py-2 text-center">{s.yearData?.total || "0"}</td>
                     <td className="px-2 py-2 text-center">{s.yearData?.rank || "-"}</td>
@@ -482,7 +491,7 @@ const Teachers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 };
 

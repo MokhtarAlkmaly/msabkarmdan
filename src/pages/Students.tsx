@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Save, Search, Columns3, Trash2, UserPlus, Printer } from "lucide-react";
+import { Plus, Save, Search, Columns3, Trash2, UserPlus, Printer, Users } from "lucide-react";
 import { START_YEAR, END_YEAR } from "@/types/student";
 import {
   StudentRegistryRow, CustomColumn, loadStudentRegistry, loadCustomColumns,
@@ -144,6 +144,12 @@ const Students = () => {
 
   const actions = (
     <>
+      <Link to="/teachers">
+        <Button size="sm" variant="secondary" className="gap-1">
+          <Users className="h-4 w-4" /> المعلمات
+        </Button>
+      </Link>
+
       <div className="flex items-center gap-2">
         <span className="text-xs sm:text-sm">عام المسابقة:</span>
         <Select
