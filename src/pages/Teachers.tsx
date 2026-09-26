@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { ArrowRight, Eye, Gift, Save, Calendar, Users, Pencil, Plus, Trash2, Award } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { Eye, Gift, Save, Calendar, Users, Pencil, Plus, Trash2, Award, GraduationCap } from "lucide-react";
+import { AppLayout } from "@/components/AppLayout";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadAllStudentsWithData,
