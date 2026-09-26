@@ -491,7 +491,6 @@ const Teachers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </AppLayout>
   );
 };
