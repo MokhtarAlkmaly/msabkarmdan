@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { ArrowRight, Eye, Gift, Save, Calendar, Users, Pencil, Plus, Trash2, Award } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { Eye, Gift, Save, Calendar, Users, Pencil, Plus, Trash2, Award, GraduationCap } from "lucide-react";
+import { AppLayout } from "@/components/AppLayout";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadAllStudentsWithData,
@@ -252,30 +252,8 @@ const Teachers = () => {
   const viewStudents = teachers.find(t => t.name === viewTeacher)?.students || [];
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="bg-primary text-primary-foreground py-6 px-4">
-        <div className="container mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
-                <ArrowRight className="h-4 w-4" />
-                رجوع
-              </Button>
-            </Link>
-            <img src={logo} alt="logo" className="h-16 w-auto" />
-            <div className="w-20" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
-              <Users className="h-6 w-6" />
-              المعلمات
-            </h1>
-            <p className="text-sm opacity-90 mt-1">عام {currentYear}هـ — عدد المعلمات: {teachers.length}</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-6">
+    <AppLayout title="المعلمات" subtitle={`عام ${currentYear}هـ — عدد المعلمات: ${teachers.length}`}>
+      <div className="container mx-auto px-1 py-2">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -290,6 +268,11 @@ const Teachers = () => {
             </Select>
           </div>
           <div className="flex gap-2">
+            <Link to="/">
+              <Button variant="outline" className="gap-2">
+                <GraduationCap className="h-4 w-4" /> الطلاب
+              </Button>
+            </Link>
             <Link to="/awards">
               <Button variant="outline" className="gap-2">
                 <Award className="h-4 w-4" /> الإكراميات والجوائز
@@ -407,7 +390,11 @@ const Teachers = () => {
                 {viewStudents.map((s, i) => (
                   <tr key={s.id} className="border-t border-border">
                     <td className="px-2 py-2 text-right">{i + 1}</td>
-                    <td className="px-2 py-2 text-right font-medium">{s.name || "—"}</td>
+                    <td className="px-2 py-2 text-right font-medium">
+                      <Link to={`/students/${s.id}`} className="text-primary hover:underline">
+                        {s.name || "—"}
+                      </Link>
+                    </td>
                     <td className="px-2 py-2 text-center">{s.yearData?.parts || "—"}</td>
                     <td className="px-2 py-2 text-center">{s.yearData?.total || "0"}</td>
                     <td className="px-2 py-2 text-center">{s.yearData?.rank || "-"}</td>
@@ -504,7 +491,8 @@ const Teachers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 

@@ -14,11 +14,11 @@ import {
 
 const links = [
   { to: "/", label: "الطلاب", icon: GraduationCap },
+  { to: "/teachers", label: "المعلمات", icon: Users },
   { to: "/competition", label: "المسابقة الرمضانية", icon: Trophy },
   { to: "/monthly", label: "المتابعة الشهرية", icon: CalendarDays },
   { to: "/khatimat", label: "كشف الخاتمات", icon: Sparkles },
   { to: "/search", label: "البحث الشامل", icon: SearchIcon },
-  { to: "/teachers", label: "المعلمات", icon: Users },
   { to: "/awards", label: "الإكراميات والجوائز", icon: Award },
   { to: "/certificates", label: "الشهادات", icon: ScrollText },
   { to: "/donors", label: "الداعمون", icon: HeartHandshake },
